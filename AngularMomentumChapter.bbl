@@ -1,0 +1,309 @@
+\begin{thebibliography}{10}
+
+\bibitem{FeOr08}
+R.~Featherstone and D.~E. Orin.
+\newblock Dynamics, chapter 2.
+\newblock {\em Springer Handbook of Robotics, B. Siciliano and O. Khatib,
+  Eds.}, 2008.
+
+\bibitem{Featherstone87}
+Roy Featherstone.
+\newblock {\em Robot Dynamics Algorithms}.
+\newblock Kluwer Academic Publishers, 1987.
+
+\bibitem{RoJa91}
+A.~Jain G.~Rodriguez and K.~Kreutz-Delgado.
+\newblock A spatial operator algebra for manipulator modelling and control.
+\newblock {\em Intn'l J. of Robotics Research}, 10(4):371--381, 1991.
+
+\bibitem{KKKFHYH03}
+S.~Kajita, F.~Kanehiro, K.~Kaneko, K.~Fujiwara, K.~Harada, K.~Yokoi, and
+  H.~Hirukawa.
+\newblock Resolved momentum control: {H}umanoid motion planning based on the
+  linear and angular momentum.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, volume~2, pages 1644--1650, 2003, Las Vegas, NV, USA.
+
+\bibitem{Kagami00}
+S.~Kagami, F.~Kanehiro, Y.~Tamiya, M.~Inaba, and H.~Inoue.
+\newblock Auto{B}alancer: {A}n online dynamic balance compensation scheme for
+  humanoid robots.
+\newblock In {\em Proc. of the 4th International Workshop on Algorithmic
+  Foundation on Robotics}, 2000.
+
+\bibitem{Kudoh02}
+S.~Kudoh, T.~Komura, and K.~Ikeuchi.
+\newblock The dynamic postural adjustment with the quadratic programming
+  method.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2002.
+
+\bibitem{KLKK05}
+T.~Komura, H.~Leung, S.~Kudoh, and J.~Kuffner.
+\newblock A feedback controller for biped humanoids that can counteract large
+  perturbations during gait.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  2001--2007, 2005, Barcelona, Spain.
+
+\bibitem{PHH04}
+M.~Popovic, A.~Hofmann, and H.~Herr.
+\newblock Angular momentum regulation during human walking: Biomechanics and
+  control.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  2405--2411, April, New Orleans, LA, USA 2004.
+
+\bibitem{Macchietto09}
+Adriano Macchietto, Victor Zordan, and Christian~R. Shelton.
+\newblock Momentum control for balance.
+\newblock {\em ACM Transactions on Graphics}, 28(3):80:1--80:8, July 2009.
+
+\bibitem{Vuko69}
+M.~Vukobratovi\'{c} and D.~Juri\v{c}i\'{c}.
+\newblock Contribution to the synthesis of biped gait.
+\newblock {\em IEEE Trans. Bio-Medical Eng.}, 16(1), 1969.
+
+\bibitem{Sano90}
+A.~Sano and J.~Furusho.
+\newblock Realization of natural dynamic walking using the angular momentum
+  information.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  1476 -- 1481, May 1990.
+
+\bibitem{Stephens07}
+Benjamin Stephens.
+\newblock Integral control of humanoid balance.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2007.
+
+\bibitem{Sugihara02}
+T.~Sugihara, Y.~Nakamura, and H.~Inoue.
+\newblock Realtime humanoid motion generation through {ZMP} manipulation based
+  on inverted pendulum control.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  1404--1409, May 2002.
+
+\bibitem{Choi07}
+Youngjin Choi, Doik Kim, Yonghwan Oh, and Bum-Jae You.
+\newblock Posture/walking control for humanoid robot based on kinematic
+  resolution of {CoM} {J}acobian with embedded motion.
+\newblock {\em IEEE Trans. on Robotics}, 23(6):1285--1293, 2007.
+
+\bibitem{Park05}
+Jonghoon Park, Youngil Youm, and Wan-Kyun Chung.
+\newblock Control of ground interaction at the zero-moment point for dynamic
+  control of humanoid robots.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  1724 -- 1729, April 2005.
+
+\bibitem{Stephens10}
+Benjamin~J. Stephens and Christopher~G. Atkeson.
+\newblock Dynamic balance force control for compliant humanoid robots.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2010.
+
+\bibitem{Zhou03}
+Changjiu Zhou and Qingchun Meng.
+\newblock Dynamic balance of a biped robot using fuzzy reinforcement learning
+  agents.
+\newblock {\em Fuzzy Sets and Systems}, 134(1):169--187, 2003.
+
+\bibitem{Muico09}
+Uldarico Muico, Yongjoon Lee, Jovan Popovi\'c, and Zoran Popovi\'c.
+\newblock Contact-aware nonlinear control of dynamic characters.
+\newblock {\em ACM Transactions on Graphics}, 28(3), 2009.
+
+\bibitem{Huang05}
+Qiang Huang and Yoshihiko Nakamura.
+\newblock Sensory reflex control for humanoid walking.
+\newblock {\em IEEE Trans. on Robotics}, 21(5):977--984, Oct. 2005.
+
+\bibitem{Goswami04}
+A.~Goswami and V.~Kallem.
+\newblock Rate of change of angular momentum and balance maintenance of biped
+  robots.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  3785--3790, April 2004.
+
+\bibitem{Mitobe04}
+K.~Mitobe, G.~Capi, and Y.~Nasu.
+\newblock A new control method for walking robots based on angular momentum.
+\newblock {\em Mechatronics}, 14(2):163--174, 2004.
+
+\bibitem{KKKYH01}
+S.~Kajita, F.~Kanehiro, K.~Kaneko, K.~Yokoi, and H.~Hirukawa.
+\newblock The 3{D} linear inverted pendulum model: A simple modeling for a
+  biped walking pattern generator.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, pages 239--246, 2001, Maui, Hawaii.
+
+\bibitem{Naksuk04}
+N.~Naksuk, Y.~Mei, and C.S.G. Lee.
+\newblock Humanoid trajectory generation: an iterative approach based on
+  movement and angular momentum criteria.
+\newblock In {\em IEEE/RAS Intn'l Conf. on Humanoid Robots}, pages 576--591,
+  Nov. 2004.
+
+\bibitem{Sian03}
+N.~E. Sian, K.~Yokoi, S.~Kajita, F.~Kanehiro, and K.~Tanie.
+\newblock Whole body teleoperation of a humanoid robot -a method of integrating
+  operator??s intention and robot's autonomy.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, 2003.
+
+\bibitem{Ahn06}
+Kyung-Ho Ahn and Yonghwan Oh.
+\newblock Walking control of a humanoid robot via explicit and stable {CoM}
+  manipulation with the angular momentum resolution.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2006.
+
+\bibitem{Ugurlu10}
+Barkan Ugurlu and Atsuo Kawamura.
+\newblock Eulerian {ZMP} resolution based bipedal walking: Discussions on the
+  rate change of angular momentum about center of mass.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, 2010.
+
+\bibitem{Ye10}
+Yuting Ye and C.~Karen Liu.
+\newblock Optimal feedback control for character animation using an abstract
+  model.
+\newblock {\em ACM Transactions on Graphics}, 29(3), 2010.
+
+\bibitem{Lasa10}
+Martin de~Lasa, I.~Mordatch, and A.~Hertzmann.
+\newblock Feature-based locomotion controllers.
+\newblock {\em ACM Transactions on Graphics}, 29(3), 2010.
+
+\bibitem{AG05}
+M.~Abdallah and A.~Goswami.
+\newblock A biomechanically motivated two-phase strategy for biped robot
+  upright balance control.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  3707--3713, April 2005, Barcelona, Spain.
+
+\bibitem{Hofmann09}
+Andreas Hofmann, Marko Popovic, and Hugh Herr.
+\newblock Exploiting angular momentum to enhance bipedal center-of-mass
+  control.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  4423--4429, May 2009.
+
+\bibitem{LeeGoswami10}
+Sung-Hee Lee and Ambarish Goswami.
+\newblock Ground reaction force control at each foot: A momentum-based humanoid
+  balance controller for non-level and non-stationary ground.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2010.
+
+\bibitem{LG12}
+Sung-Hee Lee and Ambarish Goswami.
+\newblock A momentum-based balance controller for humanoid robots on non-level
+  and non-stationary ground.
+\newblock {\em Autonomous Robots}, 33(4):399--414, 2012.
+
+\bibitem{Fujimoto98a}
+Yasutaka Fujimoto and Atsuo Kawamura.
+\newblock Simulation of an autonomous biped walking robot including
+  environmental force interaction.
+\newblock {\em IEEE Robotics \& Automation Magazine}, 5(2):33--41, 1998.
+
+\bibitem{Fujimoto98b}
+Yasutaka Fujimoto, Satoshi Obata, and Atsuo Kawamura.
+\newblock Robust biped walking with active interaction control between foot and
+  ground.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  2030--2035, 1998.
+
+\bibitem{Fujimoto98c}
+Yasutaka Fujimoto.
+\newblock {\em Study on Biped Walking Robot with Environmental Force
+  Interaction}.
+\newblock PhD thesis, Yokohama National University, 1998.
+
+\bibitem{SPK10}
+L.~Sentis, J.~Park, and O.~Khatib.
+\newblock Compliant control of multicontact and center-of-mass behaviors in
+  humanoid robots.
+\newblock {\em IEEE Trans. on Robotics}, 26(3):483--501, 2010.
+
+\bibitem{Park07}
+J.~Park, J.~Han, and F.C. Park.
+\newblock Convex optimization algorithms for active balancing of humanoid
+  robots.
+\newblock {\em IEEE Trans. on Robotics}, 23(4):817--822, 2007.
+
+\bibitem{Sugihara03}
+Tomomichi Sugihara and Yoshihiko Nakamura.
+\newblock Variable impedant inverted pendulum model control for a seamless
+  contact phase transition on humanoid robot.
+\newblock In {\em IEEE-RAS/RSJ International Conference on Humanoid Robots},
+  2003.
+
+\bibitem{Sugihara03b}
+Tomomichi Sugihara.
+\newblock {\em Mobility Enhancement Control of Humanoid Robot based on Reaction
+  Force Manipulation via Whole Body Motion}.
+\newblock PhD thesis, University of Tokyo, 2003.
+
+\bibitem{UK10}
+B.~Ugurlu and A.~Kawamura.
+\newblock Eulerian zmp resolution based bipedal walking: Discussion on the
+  intrinsic angular momentum rate change about center of mass.
+\newblock In {\em IEEE Intn'l Conf. on Robotics and Automation (ICRA)}, pages
+  4218--4223, 2010.
+
+\bibitem{HP08}
+H.~Herr and M.~Popovic.
+\newblock Angular momentum in human walking.
+\newblock {\em The Journal of Experimental Biology}, 211:467--481, 2008.
+
+\bibitem{Block96}
+A.~M. Bloch, P.~S. Krishnaprasad, J.~E. Marsden, and R.~M. Murray.
+\newblock Nonholonomic mechanical systems with symmetry.
+\newblock {\em Archive for Rational Mechanics and Analysis}, 136(1):21--99,
+  Dec. 1996.
+
+\bibitem{Wie05}
+P.-B. Wieber.
+\newblock Holonomy and nonholonomy in the dynamics of articulated motion.
+\newblock In {\em Fast Motions in Biomechanics and Robotics, Heidelberg,
+  Germany}, Heidelberg, Germany 2005.
+
+\bibitem{YG11}
+S-K. Yun and A.~Goswami.
+\newblock Momentum-based reactive stepping controller on level and non-level
+  ground for humanoid robot push recovery.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, September 2011.
+
+\bibitem{Pollard01}
+Nancy~S. Pollard and Paul S.~A. Reitsma.
+\newblock Animation of humanlike characters: Dynamic motion filtering with a
+  physically plausible contact model.
+\newblock In {\em Yale Workshop on Adaptive and Learning Systems}, 2001.
+
+\bibitem{Hyon07}
+Sang-Ho Hyon, J.G. Hale, and G.~Cheng.
+\newblock Full-body compliant human--humanoid interaction: Balancing in the
+  presence of unknown external forces.
+\newblock {\em IEEE Trans. on Robotics}, 23(5):884--898, 2007.
+
+\bibitem{OG08}
+D.~Orin and A.~Goswami.
+\newblock Centroidal momentum matrix of a humanoid robot: Structure and
+  properties.
+\newblock In {\em IEEE/RSJ Intn'l Conf. on Intelligent Robots and Systems
+  (IROS)}, 2008, Nice, France.
+
+\bibitem{lourakis04LM}
+M.I.A. Lourakis.
+\newblock levmar: Levenberg-marquardt nonlinear least squares algorithms in
+  {C}/{C}++.
+\newblock [web page] \verb+http://www.ics.forth.gr/~lourakis/levmar/+, Jul.
+  2004.
+
+\bibitem{MLS94}
+Richard~M. Murray, Zexiang Li, and S.~Shankar Sastry.
+\newblock {\em A Mathematical Introduction to Robotic Manipulation}.
+\newblock CRC Press, 1994.
+
+\end{thebibliography}

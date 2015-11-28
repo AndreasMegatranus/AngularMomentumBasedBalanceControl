@@ -1,0 +1,55 @@
+This is BibTeX, Version 0.99d (TeX Live 2014/W32TeX)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: AngularMomentumChapter.aux
+The style file: unsrt.bst
+Database file #1: AngularMomentumChapter.bib
+Repeated entry---line 235 of file AngularMomentumChapter.bib
+ : @misc{lourakis04LM
+ :                   ,
+I'm skipping whatever remains of this entry
+Warning--empty chapter and pages in Featherstone87
+Name 1 in "G. Rodriguez, A. Jain, and K. Kreutz-Delgado" has a comma at the end for entry RoJa91
+while executing---line 944 of file unsrt.bst
+Warning--empty chapter and pages in MLS94
+You've used 49 entries,
+            1791 wiz_defined-function locations,
+            742 strings with 11401 characters,
+and the built_in function-call counts, 12499 in all, are:
+= -- 1106
+> -- 476
+< -- 14
++ -- 177
+- -- 128
+* -- 744
+:= -- 1798
+add.period$ -- 147
+call.type$ -- 49
+change.case$ -- 45
+chr.to.int$ -- 0
+cite$ -- 51
+duplicate$ -- 653
+empty$ -- 1328
+format.name$ -- 128
+if$ -- 2930
+int.to.chr$ -- 0
+int.to.str$ -- 49
+missing$ -- 48
+newline$ -- 248
+num.names$ -- 49
+pop$ -- 214
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 376
+stack$ -- 0
+substring$ -- 821
+swap$ -- 219
+text.length$ -- 14
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 2
+while$ -- 108
+width$ -- 51
+write$ -- 525
+(There were 2 error messages)
