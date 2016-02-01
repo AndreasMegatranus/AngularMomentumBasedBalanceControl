@@ -22,6 +22,8 @@
 \usepackage{color}
 \usepackage{multirow}
 
+\graphicspath{{Figures/}}
+
 \newcommand\defeq{\stackrel{\mathrm{def}}{=}}
 % Add a period to the end of an abbreviation unless there's one
 % already, then \xspace.
@@ -1032,6 +1034,366 @@ study of angular momentum during human gait~\cite{HP08}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Comparison with ZMP-based control}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Earlier approaches to humanoid walking control involved planning joint motions such that a 
+given reference ZMP trajectory was achieved \cite{nishiwaki2001online}.
+The motion planning was performed offline, and the resulting joint trajectories were then tracked 
+using PID or similar controllers.
+The problem with this approach is that it is very brittle;  it is not robust to balance disturbances
+because the joint controllers have no knowledge about the relation between CM and ZMP, which is 
+fundamental to balance.
+This basic approach of playing back pre-computed joint trajectories has also been used extensively
+in hobby robots such as the ones used in the Robo One competitions \cite{roboone}.  
+The result is predictable;  the robots fall over very easily.
+Despite its problems, a key advantage of this approach is that it does not require use of an
+\textit{Inertial Measurement Unit} (IMU) to estimate key aspects of robot state, such as CM position
+and velocity.  
+This has become less of an advantage in recent years as the price of accurate 
+IMU units has dropped dramatically.
+Robot state estimation will be discussed in more detail, subsequently.
+
+An early variation of the pre-computed trajectory approach involved computing the joint motions 
+online, but still with the goal of following a reference ZMP trajectory \cite{nishiwaki2002online, 
+kagami2002fast, sugihar2002real}.  
+While this is an improvement in that it doesn't blindly follow
+joint trajectories, it still has a fundamental problem.
+As will be explained in more detail in the next section, the ZMP is not the desired quantity to be
+controlled. 
+The actual quantity to be controlled is momentum, or, related to this, the position and velocity of the 
+robot's CM.
+The ZMP is, effectively, a control input;  manipulation of the ZMP has the effect of accelerating the CM.
+Thus, while using a reference ZMP trajectory as a feed-forward term may be useful,
+tracking a reference ZMP trajectory exclusively, without feedback terms based on the true
+quantities to be controlled (CM state), results in an unstable system.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Control Problem Statement}
+\label{sec:problemstatement}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In this section, we introduce the types of tasks that we would like a humanoid robot to perform, and define what it means to maintain
+balance while performing these tasks.  We also discuss the implied requirements for a balance controller.
+
+% First, introduce tasks to be accomplished, and how they should be specified
+
+\subsection{Humanoid Robot Tasks and their Specification}
+
+Humanoid bipedal morphologies have unique characteristics that provide significant advantages (and some disadvantages) over quadruped or wheeled robots. 
+Key functional features of the humanoid morphology include a variable base of support and a high center of mass.
+Because bipeds have only two legs, their support base is naturally constrained, allowing them to operate in environments where support base space is limited; 
+many human environments require this. 
+The legs can also be placed in wide stances, when space permits, enhancing stability against disturbances.
+The feet can also be placed in specific locations, allowing for traversal over terrain where foot placement is constrained due to obstacles.
+Thus, a key advantage of the humanoid morphology is that the variable base of support allows both for operation in constrained spaces, 
+as well as stability against disturbances, 
+Humanoid bipeds also have a high center of mass.  
+This has the advantage that an elevated ``sensor package'' can be supported; when standing erect, the head can see over obstacles. 
+
+An example task for such a system is to walk to a moving soccer ball and kick it, as shown in Figure \ref{fig:Soccer1}.  
+Stepping movement must be synchronized with ball movement so that the kick happens when the ball is close enough.  
+More generally, such tasks require that the biped be in an acceptable location and pose at an acceptable time.  
+This implies spatial and temporal constraints for such tasks.  
+There are also important dynamic balance constraints that limit the kinds of movements the biped may make without falling down.
+
+\begin{figure}[b]
+ \subfigure[]
+    {
+       \label{fig:SoccerKick}
+       \includegraphics[height=1.5in]{SoccerKick}
+    }
+ \subfigure[]
+   {
+       \label{fig:SoccerTrip}
+       \includegraphics[height=1.5in]{SoccerTrip}
+   }\vspace{-10pt}
+\caption{Kicking soccer ball task, interrupted by trip disturbance}
+\label{fig:Soccer1}
+\end{figure}
+
+If the system encounters a disturbance while performing a task, it will have to compensate in some way in order to satisfy these constraints.  
+The disturbance may cause a delay, allowing another player to kick the ball, or it may interfere with movement synchronization.  
+For example, a trip, shown in Figure \ref{fig:SoccerTrip} causes disruption of synchronization between the stepping foot, and the overall forward movement 
+of the system’s center of mass. 
+
+Another example task is walking on a constrained foot path, such as stones across a brook, or on a balance beam.  
+As with the soccer ball example, this task has spatial, temporal, and dynamic constraints, but in this case, the spatial constraints are more stringent;  
+the biped must reach its goal using foot placements that are precisely constrained. 
+Figure \ref{fig:WalkOnStonesIntro1} shows a biped walking over blocks that constrain foot placement.  
+When foot placement is constrained, the stepping pattern can’t be changed arbitrarily to compensate for a disturbance.  
+For example, if a lateral push disturbance occurs, rather than stepping the leg out to the side, other compensating techniques, 
+such as angular movement of the body and swing leg must be used, as shown in Figure \ref{fig:LatPushIntro1}.
+
+\begin{figure}[b]
+\includegraphics[height=1.5in]{WalkOnStonesIntro1}
+\caption{Dynamic walking with foot placement constraints.}
+\label{fig:WalkOnStonesIntro1}       
+\end{figure}
+
+\begin{figure}[b]
+\includegraphics[height=1.5in]{LatPushIntro1}
+\caption{Compensating for lateral push disturbance using angular movement of torso and swing leg.}
+\label{fig:LatPushIntro1}       
+\end{figure}
+
+In these examples, and others like them, the key challenge is to move the humanoid,
+a complex, dynamic system, to an acceptable pose at an acceptable time, despite actuation limits, and despite disturbances.
+The system should be able to recover from disturbances such as slips, trips, pushes, and ground contact instability due to soft terrain, 
+even when foot placement is constrained.  
+In particular, it should utilize flexibility in the task specification to achieve its goals.
+For example, it may temporarily sacrifice a goal of maintaining an upright pose in order to achieve balance goals.
+
+We seek to develop a robust plan execution system capable of guiding a robotic biped through a series of walking task goals, in the presence of disturbances.  
+The system must understand commands at the task level;  it must take as input a high-level specification of where it should be, and by what time, and then 
+automatically figure out the details of how to move to accomplish these goals.  
+It should also be able to automatically detect whether a task that it is given can be accomplished in the allotted time, and should warn the human operator 
+when this is not the case.  
+If a disturbance occurs during execution of the task, the system should attempt to compensate in order to avoid a fall, and should still try to 
+complete the task on time.  
+If this is not possible, the system should alert the user, or a higher-level control authority, and should prepare itself for failure.
+For example, if a fall is inevitable, it should put out its hands to break the fall.
+
+
+
+\subsection{Humanoid Robot Balance Control}
+
+Not all tasks for humanoid forms necessarily require balance as an end goal. 
+For example, a football player trying to score a touchdown, or a baseball player trying to catch a fly ball,
+does not care if he is upright at the end, as long as the goal is achieved.
+For the subsequent discussion, however, we assume that balance control is included as an end goal in a task specification.
+% Note that it is not necessarily an intermediate goal.  Often, in single support, full balance control is not possible.
+% However, the intent is to ``catch'' things so that in the subsequent double support phase, full balance control is
+% achieved.
+
+This naturally leads us to the need for a precise definition of balance control.
+Consider a horizontal plane that intersects the CM, and that is perpendicular to the gravity vector.
+We define balance control as the ability to accelerate the CM in any direction in this 
+horizontal plane.
+
+% Make this a formal definition?  Show diagram of plane, or is this obvious?
+
+% Give example.
+
+In order to understand this problem in more detail, it is useful to develop a basic model that incorporates
+all the quantities of interest.
+[The following may be, to some extent, redundant with what has already been presented.
+Talk to Ambarish about how to collapse].
+
+
+
+Balance control, as defined above, requires the ability to adjust the humanoid biped’s linear and angular momentum.  
+Due to conservation of momentum laws, such adjustment can only be achieved through force interaction with the environment.  
+For a biped, this force interaction is comprised of gravity and the ground reaction force, the net force exerted by the ground against the biped.  
+The following analysis of physical constraints and requirements for balancing leads to a simple, comprehensive model of balance control that specifies 
+coordination of control actions that adjust the ground reaction force, and therefore, the momentum of the biped.
+Similar models have been used previously in a number of gait planning algorithms 
+\cite{kajita2001real, yokoi2001honda, sugihara2002real, nishiwaki2002online}.
+These models utilize analysis of inverted pendulum dynamics \cite{formal2006inverted}.
+A key difference in the model presented here is its ability to 
+purposely sacrifice angular momentum control goals in order to achieve linear control goals when both cannot be met.  
+
+The model makes use of a number of physical points that summarize the system’s balance state.  
+These points are the center of mass (CM), the zero-moment point (ZMP) \cite{vukobratovic69},
+and the centroidal-moment point (CMP) \cite{popovic2005ground}.  
+The ZMP is a point on the ground that represents the combined force interaction of all ground contact points.  
+The CMP is the point on the ground from which the ground reaction force would have to emanate if it were to produce no torque about the CM. 
+These points will be defined more formally in the following discussion.
+
+% Support base
+A biped’s \textit{support base} is defined as the smallest convex polygon that includes all points where the feet are in contact with the ground.  
+When in single support, that is, where one foot, the stance foot, is on the ground and the other is stepping, the support base is the outline of the part of 
+the stance foot that is in contact with the ground.  
+When in double support, that is, where both feet are on the ground, the base of support is the smallest convex polygon that includes all points where the two feet are in 
+contact with the ground.  
+
+% Ground reaction force
+The ground reaction force vector, $\mathbf{F}_{gr}$, is defined as the integral, over the base of support, of the incremental ground reaction forces emanating from each 
+point of contact with the ground:
+
+\begin{equation}
+\mathbf{F}_{gr} = \iint\limits_{BOS} \mathbf{F}_{gr} \left( x, y \right) dx dy
+\label{eq:Fgr}
+\end{equation}
+
+\noindent where $\mathbf{F}_{gr} \left( x, y \right)$ is the incremental force at point $x,y$ on the ground, and $BOS$ refers to the base of support region.
+
+% CM
+The CM is the weighted mean of the positions of all points in the system, where the weight applied to each point is the point’s mass.  Thus, for a discrete distribution of masses $m_i$, located at positions $\mathbf{r}_i$, the position of the center of mass is given by
+
+\begin{equation}
+\mathbf{CM} = \frac{\sum_i m_i \mathbf{r}_i}{\sum_i m_i}
+\label{eq:CM}
+\end{equation}
+
+\noindent A bipedal mechanism consists of a set of articulated links, each of which is a rigid body with mass $m_i$.
+Each rigid body has its own CM at a point $\mathbf{r}_i$.
+
+The CM represents the effective mass of the system, concentrated at a single point.  
+This is valuable because it allows for simplifying the balance control problem to one of keeping the CM in the right place at the right time.  
+Furthermore, the control dynamics of this point is expressed, simply, by Newton’s law, $\mathbf{F}_{gr} = m \mathbf{a}$, where $m$ is the total
+mass of the system, and $\mathbf{a}$ is the resulting acceleration of the CM.
+
+% ZMP
+Vukobratovic and Stepanenko defined the ZMP as the point of resulting reaction forces at the contact surface between the extremity and the ground \cite{vukobratovic1972stability};  
+it is the point from which the ground reaction force vector, defined by \ref{eq:Fgr}, emanates.  
+The ZMP may be defined as the point on the ground surface about which the horizontal component of the moment of ground reaction force is zero 
+\cite{arakawa1997natural, vukobratovic2004zero}.
+Because the base of support is defined by the convex polygon of points in contact with the ground, and because the ZMP represents the average force contribution 
+of these points, the ZMP is always inside the biped’s base of support \cite{Gos99b}. 
+
+We designate the horizontal axes as x and y, where x represents the anterior-posterior direction, and y the medio-lateral direction.
+The designate the vertical axis as z (positive direction is upwards).
+The position of the ZMP along these axes, $x_{ZMP}$ and $y_{ZMP}$ can be expressed in terms of CM position, force, and moment as
+
+\begin{eqnarray}
+x_{ZMP} = x_{CM} - \frac{F_{grx}}{F_{grz}} z_{CM} - \frac{\tau_y}{F_{grz}}\\
+y_{ZMP} = y_{CM} - \frac{F_{gry}}{F_{grz}} z_{CM} + \frac{\tau_x}{F_{grz}}
+\label{eq:ZMP}
+\end{eqnarray}
+
+\noindent where $x_{cm}$, $y_{cm}$, and $z_{cm}$ are the $x$, $y$, and $z$ positions of the CM, $F_{grx}$, $F_{gry}$, and $F_{grz}$ are the ground 
+reaction forces in the $x$, $y$, and $z$ directions, and $\tau_x$ and $\tau_y$ are the CM moments about the x and y axes, respectively.
+
+Because the gravitational force is purely vertical, $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CM.  The net vertical CM force, $F_z$,
+is $F_z = F_{grz} - Mg$, where $g$ is the gravitational acceleration and $M$ is the total mass.
+The ZMP is always inside the support base \cite{popovic2005ground}.  If the moments in Eq. (2) are zero, the ground reaction force vector points directly at the CM, as shown in Fig. \ref{fig:Fig1} A.
+
+% CMP
+The \textit{Centroidal Moment Pivot} (CMP) is the point on the ground, not necessarily within the support base, from  which the observed net ground reaction 
+force vector would have to act in order to generate no torque about the CM (for $\tau_x$ and $\tau_y$ in \ref{eq:ZMP} to be 0).
+Thus, it is that point where a line parallel to the ground reaction force vector, passing through the CM, intersects with the ground, 
+as shown in Fig. \ref{fig:Fig1} B.  
+The CMP can be expressed as
+
+\begin{equation}
+\left( \mathbf{r}_{CMP} - \mathbf{r}_{CM} \right) \times \mathbf{F}_{gr} = 0
+\label{eq:CMP}
+\end{equation}
+
+Expanding this cross product yields
+
+\begin{eqnarray}
+x_{CMP} = x_{CM} - \frac{F_{grx}}{F_{grz}} z_{CM}\\
+y_{CMP} = y_{CM} - \frac{F_{gry}}{F_{grz}} z_{CM}
+\label{eq:CMP2}
+\end{eqnarray}
+
+\noindent Note that because $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CM, this relation can be used to compute horizontal CM force 
+as a function of CM position, CMP point location, and vertical ground reaction force.  
+Such horizontal forces are critical for maintaining bipedal stability since they can be applied to change CM state to desired values.  
+
+By combining Eqs. \ref{eq:ZMP} and \ref{eq:CMP2}, we obtain a relation between ZMP and CMP:
+
+\begin{eqnarray}
+x_{CMP} = x_{ZMP} + \frac{\tau_y}{F_{grz}}\\
+y_{CMP} = y_{ZMP} - \frac{\tau_x}{F_{grz}}
+\label{eq:CMP3}
+\end{eqnarray}
+
+Eq. \ref{eq:CMP3} shows that when there is no horizontal moment about the CM, the CMP and ZMP points coincide.  
+In this case, the ground reaction force vector points directly to the CM, as shown in Fig. \ref{fig:Fig1} A.  
+Conversely, when there is a horizontal moment about the CM, the CMP and ZMP diverge.  
+The horizontal separation distance between these points is the moment arm for the CM moment due to vertical force, $F_{grz}$, as shown in Fig. \ref{fig:Fig1} B.  
+Note that as the CMP and ZMP diverge, the ZMP must remain within the support base, but the CMP may leave the region of support. 
+
+\begin{figure}[b]
+\includegraphics[height=2in]{Fig1}
+\caption{As shown in A), if there is no moment about the CM, the ground reaction force points from the ZMP to the CM position.  As shown in  B),  if there is a moment about the CM, the ZMP and CMP diverge, where the separation distance is the moment arm associated with the vertical force, $F_{grz}$.
+(\copyright IEEE, 2009, reprinted with permission)}
+\label{fig:Fig1}       
+\end{figure}
+
+The relationship between the CM and CMP indicates the specific effect that the net ground reaction force has on CM translation. 
+Because the observed net ground reaction force always operates at the ZMP which is within the support base, 
+whenever the net ground reaction force generates no torque about the CM, then the ZMP and CMP coincide. 
+If the net ground reaction force generates torque, however, then the CMP and ZMP differ in location, and, in particular, the CMP may be outside 
+the support base. 
+
+It is sometimes desirable to have the CMP and ZMP diverge as shown in Fig. 1B so that horizontal CM forces can be more effectively controlled.  
+In this case the CMP can be displaced from the ZMP which reflects the increased ability of the net ground reaction force to 
+affect translation of the CM. 
+The associated moment about the CM generally produces undesirable effects, such as loss of upright orientation of the upper body.  
+In many cases, these effects are temporary, can be managed, and are well worth the overall positive effect on CM position and velocity.  
+For example, a tightrope walker will tolerate temporary angular instability if this means that he won’t fall off the tightrope.  
+
+Use of the CMP is demonstrated in Figure \ref{fig:LateralDisturbanceRecovery}, which depicts recovery from a lateral disturbance.  
+This sequence shows an initial disturbance that pushes the biped to the right.  
+To compensate, the system takes control actions involving rotation of the body and swing leg, that move its CMP to the right, 
+creating a lateral compensating force to the left.  
+Because the disturbance is significant, the CMP moves beyond the edge of the support polygon, and thus, it does not coincide with the ZMP.  
+This compensating action corresponds to a clockwise torque about the CM, which is manifested by clockwise rotation of the torso and right leg.  
+
+\begin{figure}[b]
+ \subfigure[]
+    {
+       \label{fig:LateralDisturbance1}
+       \includegraphics[height=3in]{LateralDisturbance1}
+    }
+ \subfigure[]
+   {
+       \label{fig:CMP_recovery1}
+       \includegraphics[height=3in]{CMP_recovery1}
+   }\vspace{-10pt}
+\caption{Recovery from a lateral disturbance using CMP.}
+\label{fig:LateralDisturbanceRecovery}
+\end{figure}
+
+The model of balance control presented here, where requirements for balance are expressed in terms of CM, ZMP, CMP, and the support base 
+is extremely useful for planning and control, due to its simplicity.  
+Balance control is then reduced to a problem of adjusting the base of support, adjusting the ZMP within the base of support, and, if necessary, performing motions 
+that generate angular momentum, so that the CMP can be moved, temporarily, outside the base of support, in order to exert additional compensating force on the CM.
+
+
+
+\subsection{Balance Controller Requirements and Approach}
+
+We have assumed that balance control, as defined above, is an end goal for any task of interest here.
+This does not, however, imply that balance control (as defined above) must be maintained throughout the
+walking task.
+For example, with typical dynamic walking, the single support or ``stepping'' phase does not satisfy this constraint.
+With typical dynamic walking, the support leg pushes the CM to the opposite side, but, particularly at the end of this phase,
+is not able to push the CM to its side.
+
+[Need diagram here?]
+
+This is usually ok because the subsequent double support phase ``catches'' the system
+(the task specification should be flexible enough to not require full balance control throughout the task, only at the end).
+Thus, it is not uncommon for full balance control to be intermittent, and any controller should take this into account.
+Further, as discussed above, it is often desirable to sacrifice some posture goals in favor of balance control goals.
+Such sacrifice will typically be intermittent, in response to disturbances, allowing upright posture to be restored
+by the end of the task.
+The controller should be intelligent enough to take advantage of such flexibility in the task specification.
+
+This suggests that the controller framework should be equiped with some ``foresight'', allowing it to verify that end
+goals are achieved, even if they are not maintained throughout the task.
+A good approach for achieving such foresight is to use a \textit{Receding Horizon Model Predictive Controller} framework [cite].
+Such a controller essentially plans control actions over a limited (receding) time horizon.
+In this sense, it performs calculations similar to those of a motion planner.
+However, the purposes for these calculations are very different.
+Whereas the purpose of the calculations in a motion planner is to generate detailed joint trajectories to be executed exactly, 
+the purpose of the calculations in the receding horizon controller is to guarantee that the next control action does not
+lead the system into an undesired state at the end of the horizon.
+This allows a receding horizon controller to accept uncontrollable balance single support phases if the subsequent double support
+phase is balance controllable.
+It allows a receding horizon controller to know that a temporary sacrifice of postural goals (a temporary utilization of the 
+angular momentum reservoir) is possible in response to a disturbance.
+
+% See emails with Ambarish.
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Task Specification and Execution}
+\label{sec:tasklevel}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+[Keep this short;  it is not the focus of this chapter.
+However, something should be mentioned;  reference previous papers.
+Talk to Ambarish.]
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
