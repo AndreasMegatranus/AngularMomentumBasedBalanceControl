@@ -427,7 +427,7 @@
 
 \def\title#1{{\noindent\Large{\bf #1}\par}}
 \def\author#1{\begin{center}{\sc #1\par}\end{center}}
-\renewcommand{\section}[1]{\vspace{0.1in}\noindent{\large\bf{#1}}\par\vspace{.05in}\par\nopagebreak}
+%\renewcommand{\section}[1]{\vspace{0.1in}\noindent{\large\bf{#1}}\par\vspace{.05in}\par\nopagebreak}
 
 \makeatletter
 \def\thebibliography#1{\section{Recommended Readings\@mkboth
@@ -456,9 +456,356 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{What is momentum?}
+%\subsection{What is momentum?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%\subsection{Humanoid Robot Tasks and Their Specification}
+
+Humanoid bipedal morphologies have unique characteristics that provide significant advantages (and some disadvantages) over quadruped or wheeled robots. 
+Key functional features of the humanoid morphology include a variable base of support and a high center of mass.
+Because bipeds have only two legs, their support base is naturally constrained, allowing them to operate in environments where support base space is limited; 
+many human environments require this. 
+The legs can also be placed in wide stances, when space permits, enhancing stability against disturbances.
+The feet can also be placed in specific locations, allowing for traversal over terrain where foot placement is constrained due to obstacles.
+Thus, a key advantage of the humanoid morphology is that the variable base of support allows both for operation in constrained spaces, 
+as well as stability against disturbances, 
+Humanoid bipeds also have a high center of mass.  
+This has the advantage that an elevated ``sensor package'' can be supported; when standing erect, the head can see over obstacles. 
+
+An example task for such a system is to walk to a moving soccer ball and kick it, as shown in Figure \ref{fig:Soccer1}.  
+Stepping movement must be synchronized with ball movement so that the kick happens when the ball is close enough.  
+More generally, such tasks require that the biped be in an acceptable location and pose at an acceptable time.  
+This implies spatial and temporal constraints for such tasks.  
+There are also important dynamic balance constraints that limit the kinds of movements the biped may make without falling down.
+
+\begin{figure}[b]
+\centering
+ \subfigure[]
+    {
+       \label{fig:SoccerKick}
+       \includegraphics[height=1.5in]{SoccerKick}
+    }
+ \subfigure[]
+   {
+       \label{fig:SoccerTrip}
+       \includegraphics[height=1.5in]{SoccerTrip}
+   }\vspace{-10pt}
+\caption{Kicking soccer ball task, interrupted by trip disturbance}
+\label{fig:Soccer1}
+\end{figure}
+
+If the system encounters a disturbance while performing a task, it will have to compensate in some way in order to satisfy these constraints.  
+The disturbance may cause a delay, allowing another player to kick the ball, or it may interfere with movement synchronization.  
+For example, a trip, shown in Figure \ref{fig:SoccerTrip} causes disruption of synchronization between the stepping foot, and the overall forward movement 
+of the system’s center of mass. 
+
+Another example task is walking on a constrained foot path, such as stones across a brook, or on a balance beam.  
+As with the soccer ball example, this task has spatial, temporal, and dynamic constraints, but in this case, the spatial constraints are more stringent;  
+the biped must reach its goal using foot placements that are precisely constrained. 
+Figure \ref{fig:WalkOnStonesIntro1} shows a biped walking over blocks that constrain foot placement.  
+When foot placement is constrained, the stepping pattern can’t be changed arbitrarily to compensate for a disturbance.  
+For example, if a lateral push disturbance occurs, rather than stepping the leg out to the side, other compensating techniques, 
+such as angular movement of the body and swing leg must be used, as shown in Figure \ref{fig:LatPushIntro1}.
+
+\begin{figure}%[b]
+\centering
+\includegraphics[height=1.5in]{WalkOnStonesIntro1}
+\caption{Dynamic walking with foot placement constraints.}
+\label{fig:WalkOnStonesIntro1}       
+\end{figure}
+
+\begin{figure}%[b]
+\centering
+\includegraphics[height=1.5in]{LatPushIntro1}
+\caption{Compensating for lateral push disturbance using angular movement of torso and swing leg.}
+\label{fig:LatPushIntro1}       
+\end{figure}
+
+In these examples, and others like them, the key challenge is to move the humanoid,
+a complex, dynamic system, to an acceptable pose at an acceptable time, despite actuation limits, and despite disturbances.
+The system should be able to recover from disturbances such as slips, trips, pushes, and ground contact instability due to soft terrain, 
+even when foot placement is constrained.  
+In particular, it should utilize flexibility in the task specification to achieve its goals.
+For example, it may temporarily sacrifice a goal of maintaining an upright pose in order to achieve balance goals.
+
+We seek to develop a robust plan execution system capable of guiding a robotic biped through a series of walking task goals, in the presence of disturbances.  
+The system must understand commands at the task level;  it must take as input a high-level specification of where it should be, and by what time, and then 
+automatically figure out the details of how to move to accomplish these goals.  
+It should also be able to automatically detect whether a task that it is given can be accomplished in the allotted time, and should warn the human operator 
+when this is not the case.  
+If a disturbance occurs during execution of the task, the system should attempt to compensate in order to avoid a fall, and should still try to 
+complete the task on time.  
+If this is not possible, the system should alert the user, or a higher-level control authority, and should prepare itself for failure.
+For example, if a fall is inevitable, it should put out its hands to break the fall.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Momentum control}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+Until recently, most balance control techniques
+have attempted to maintain balance by controlling
+only the linear motion of a robot.
+For example, Kagami et al.~\cite{Kagami00} and
+Kudoh et al.~\cite{Kudoh02} proposed methods to change
+the input joint angle trajectories to modify the position of the
+Center of Pressure (CoP), a point within the robot's support area through
+which the resultant Ground Reaction Force (GRF) acts.
+When the CoP, computed from the input joint motion, leaves the
+support base, indicating a possible toppling of a foot,
+the motion is modified to bring the CoP back inside the
+support base while the robot still follows the desired linear
+motion of the Center of Mass (CoM). The rotational motion of the
+robot remains more or less ignored in these approaches.
+
+However, rotational dynamics of a robot plays a
+significant role in balance~\cite{KLKK05}.
+%A control strategy narrowly focusing only on the linear CoM
+%motion can inadvertently allow unnecessary and potentially harmful
+%rotational motion of the robot.
+%Previous balance controllers %that primarily focused on the linear motion of a robot
+%avoided this problem somewhat heuristically, e.g.,
+%by kinematically controlling the orientation of the trunk or
+%by adding a specific joint space controller~\cite{Hyon07}.
+%A more principled approach would be to control
+%the robot's rotational dynamics directly. Indeed, e
+Experiments on human balance control also show that
+humans tightly regulate angular momentum during gait~\cite{PHH04},
+which suggests the strong possibility that angular momentum
+may be important in humanoid movements.
+
+In fact, both angular and linear momenta
+must be regulated to completely control the CoP. The fundamental quantities and the
+relations between them are schematically depicted in Fig.~\ref{fig:one2one} and described subsequently.
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=0.5\columnwidth]{Figures/one2one_new_line.pdf}%
+\caption{
+The external forces and torques in (a) are solely responsible
+for the centroidal momentum rate change in (b).
+(c): Linear momentum rate change $\vdl$ has a one-to-one
+correspondence with the GRF $\vf$.
+(d): The centroidal angular momentum rate change $\vdk$
+is determined by both $\vf$ and CoP location $\vp$.
+(e): Conversely, $\vp$ is determined by both
+$\vdl$ and $\vdk$. %
+}
+\label{fig:one2one}%
+\end{center}
+\end{figure}
+
+Fig.~\ref{fig:one2one}(a) shows all the external forces that act on a freely
+standing humanoid: the GRF $\vf$, the Ground Reaction Moment
+$\vtau_n$ normal to the ground, and the weight $m\bg$ of the robot,
+where $m$ is the total robot mass and $\bg$ is the acceleration due to gravity. The
+sums of external moments and external forces are equivalent to the rates of change of angular and linear momenta, respectively, of the robot, and the mathematical expressions for these relationships are given by (\ref{eq:vdk}) and (\ref{eq:vdl}). Fig.~\ref{fig:one2one}(b) depicts the robot's
+ rate of change of angular momentum about the CoM, $\vdk$, and linear momentum, $\vdl$, respectively.
+\begin{align}
+	\vdk &= (\vp - \vr_G)\times\vf + \vtau_n \label{eq:vdk}\\
+	\vdl &= m\vg + \vf \label{eq:vdl}	
+\end{align}
+In the above equations, $\vr_G$ is the CoM location and $\vp$ is the CoP location.
+Together $\vk$ and $\vl$ is a $6\times 1$ vector constitute the spatial centroidal momentum
+$\vh_G=[\vk^T~\vl^T]^T$.
+In this chapter, we will call it spatial momentum, or simply the momentum of the robot. 
+%The aggregate momentum of a humanoid robot may be obtained by summing up all of the angular and linear momenta contributed by the individual link segments.  The centroidal momentum is this aggregate momentum of the robot projected to a reference point instantaneously located at its CoM.
+%Note that the spatial centroidal momentunm is computed with respect to a frame which is aligned to the world frame and located at the overall CoM of the robot. Also the frame is instantaneously frozen with respect to the world frame.
+
+Indeed, as noted in \cite{Macchietto09}, the (spatial) momentum
+rate change has a one-to-one relationship with the GRF and CoP.
+From (\ref{eq:vdl}) and as shown in Fig.~\ref{fig:one2one}(c), $\vdl$ is completely determined by
+$\vf$ and vice versa. Furthermore, from (\ref{eq:vdk}) and Fig.~\ref{fig:one2one}(d), a complete
+description of $\vdk$ needs both $\vf$ and
+$\vp$. Conversely, $\vp$ depends on both $\vdk$ and $\vdl$,  which is shown in Fig.~\ref{fig:one2one}(e).\footnote{The normal torque $\vtau_n$ also affects $\vdk$ in the
+transverse plane. Actually $\vf$, $\vp$, and $\vtau_n$ together
+constitute the 6 variables that correspond to the 6 variables of the spatial momentum.
+Usually $\vtau_n$ is omitted in the discussion for simplicity
+because its magnitude is small.}
+This last sentence implies that a complete control of $\vp$ is impossible
+without controlling both momenta.%Due to this fact, attempts to control CoP by controlling
+%only CoM trajectory~\cite{Sugihara02} is fundamentally incomplete.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Related Work}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+Starting from the early work of~\cite{Vuko69}, researchers have
+developed numerous techniques for biped balance control
+using various approaches.
+Among these are joint control strategies using ankle or hip~\cite{Sano90,Stephens07},
+whole body control approaches~\cite{Kagami00,Sugihara02,KKKFHYH03,Choi07,Park05,Stephens10},
+methods that find optimal control policies~\cite{Zhou03,Muico09},
+and reflex controllers~\cite{Huang05}.
+In this section we focus on the research relevant
+to momentum-based balance control.
+
+The importance of angular momentum in humanoid walking was reported by Sano and
+Furusho as early as 1990~\cite{Sano90}. However, it was much later before its
+importance for balance maintenance
+of human and humanoid robots started to be seriously explored~\cite{KKKFHYH03,Goswami04,PHH04}.
+Sano and Furusho~\cite{Sano90}, and Mitobe et al.~\cite{Mitobe04}
+showed that it is possible to generate the desired angular momentum
+by controlling the ankle torque.
+Kajita et al.~\cite{KKKFHYH03} included angular momentum criteria into the
+whole body control framework for balance maintenance.
+After expressing desired linear and angular momenta as linear functions of the
+generalized velocities, they determined the joint velocities
+that achieved both momenta.
+
+Komura et al.~\cite{KLKK05} presented a balance controller that can counteract
+rotational perturbations using the Angular Momentum Pendulum Model (AMPM).
+This model augments the well known 3D Linear
+Inverted Pendulum Model (LIPM)~\cite{KKKYH01} with the additional capability of possessing
+centroidal angular momentum.
+Naksuk et al.~\cite{Naksuk04} proposed an iterative method
+to compute joint trajectories of humanoid robots to satisfy the desired CoM trajectory
+and to minimize the centroidal angular momentum.
+Other papers that deal with angular momentum for balance
+and gait include \cite{Sian03,Ahn06,Ugurlu10,Ye10,Lasa10}.
+
+Abdallah and Goswami~\cite{AG05} defined balance control objectives
+in terms of CoM and CoP, and achieved this goal by controlling
+the rate of change of linear and angular momenta of a reduced model
+humanoid robot. The joint accelerations to generate the target
+momentum rate change were resolved using the Moore-Penrose pseudo-inverse.
+
+Hofmann et al.~\cite{Hofmann09} presented a method that
+controls CoM by modulating angular momentum under large
+external perturbations. It gives higher priority to controlling
+linear momentum over angular momentum to enhance the performance
+of the balance controller.
+%We also give higher priority to attaining the desired linear momentum when both momenta cannot be simultaneously satisfied.
+
+%Our method improves the method in \cite{KKKFHYH03} by providing a step to check for the admissibility of the desired values of linear and angular momenta. Our work is also different from \cite{AG05} and \cite{Macchietto09} in that we define the balance control objectives more intuitively in terms of linear and angular momenta and not in terms of the net CoP.
+
+%Furthermore, our method computes contact forces at each support foot, and therefore can be used both during double-support and single-support and also on non-level, discrete, and non-stationary grounds, whereas \cite{AG05,Macchietto09,Hofmann09} consider only single-support.
+
+Table~\ref{tab:comparison} illustrates how the existing methods treat momentum,
+GRF, and CoP in formulating balance and gait strategies.
+Robot gait planning methods using reduced models such
+as \cite{KKKYH01,Choi07} (Table~\ref{tab:comparison} (a))
+compute the necessary CoM trajectory which ensures balance
+for a specified desired CoP trajectory.
+This is done using reduced models such as the LIPM.
+As can be seen from Fig.~\ref{fig:one2one}(e) CoP depends  on both
+linear and angular momenta rate changes, so
+CoM cannot be uniquely determined solely from CoP.
+This was possible in \cite{KKKYH01,Choi07} because the reduced model used in those works
+approximated the robot as a point mass, which
+can only possess a {\it zero} angular momentum.
+%In other words, the resulting CoP-CoM trajectory
+%calculated this way induces the unnatural zero rate of change of angular momentum.
+
+In the Resolved Momentum Control approach\cite{KKKFHYH03},
+both desired linear and angular momenta are used to determine
+joint motion for posture change (Table~\ref{tab:comparison} (b)).
+However, the admissibility of the CoP is not considered so the
+robot may lose balance if the values of input desired momenta are high.
+The methods in Table~\ref{tab:comparison} (c) determine
+the desired angular momentum rate change given desired CoP and linear momentum rate change.
+In our current method (Table~\ref{tab:comparison} (d)), starting
+from the desired linear/angular momenta rate changes, we first determine
+admissible foot GRFs and CoPs, and then compute corresponding admissible
+momenta rate changes.
+
+\begin{table}[h]
+%\begin{minipage}[t]{1.9\columnwidth}
+\begin{center}
+\caption{The diagrams show how each method
+on balance control or gait pattern generation
+treats momenta ($\vk,\vl$), GRF ($\vf$),
+and CoP ($\vp$). A pair of solid lines determines the target value together.
+The dotted line shows the determination process of linear motion and force.
+The subscript ``d'' indicates a desired input to the controller
+and superscript ``$\ast$'' indicates that the quantity is used to determine control
+output such as joint torques.}
+\begin{tabular}{c|c|c|c}
+\hline
+{\scriptsize (a) Kajita } & {\scriptsize (b) Kajita } & {\scriptsize (c) Abdallah and }  & {\scriptsize (d) Lee and }  \\
+
+{\scriptsize et al.~\cite{KKKYH01}, } & {\scriptsize et al.~\cite{KKKFHYH03}} & {\scriptsize Goswami~\cite{AG05},} & {\scriptsize Goswami~\cite{LeeGoswami10},}\\
+
+{\scriptsize Choi et }& &{\scriptsize Macchhietto} & {\scriptsize~\cite{LG12}}\\
+{\scriptsize al.~\cite{Choi07}}& &{\scriptsize et al.~\cite{Macchietto09}} & \\
+\hline
+\hline
+\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-LIPM.pdf}
+&
+\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-resolvedMomentum.pdf}
+&
+\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-maccietto.pdf}
+&
+\includegraphics[width=0.23\columnwidth]{Figures/lkpf-diagram-LeeGoswami.pdf} \\
+\hline
+\end{tabular}
+\label{tab:comparison}
+\end{center}
+%\end{minipage}
+\end{table}
+
+
+%Hyon et al.~\cite{Hyon07} presented a method to resolve foot GRFs and foot CoPs such that they minimize the sum of the squared norm of forces at some points on the boundary of the foot sole while satisfying the desired net GRF and CoP. Their passivity-based controller can remarkably adapt to unknown rough terrain and non-level ground~\cite{Hyon09}. Abe et al.~\cite{Abe07} represented foot GRFs and CoPs in a similar manner to \cite{Hyon07}. This method can minimize each foot GRF if the contact points are well distributed over the foot-ground contact surface. In this paper, we propose a method to distribute the foot GRFs to both feet optimally while minimizing the ankle torques during the double support. Fig.~\ref{fig:FootMinComparison} compares the previous works with our method. 
+
+
+%In another important work on the control of external forces and torques at each individual foot,
+%Fujimoto et al.~\cite{Fujimoto98a,Fujimoto98b,Fujimoto98c} resolved foot GRFs and torques simultaneously using a quadratic programming method.
+%In contrast, we  resolve foot GRFs and foot CoPs sequentially, using two least-squares problems, each of which can be solved very quickly. Another notable difference between our work and that of \cite{Fujimoto98a,Fujimoto98b,Fujimoto98c} is that the latter computed external forces and torques from desired accelerations of CoM and trunk orientation whereas we compute them from desired linear and angular momenta rate changes. The advantage of computing desired trunk orientation from external forces and torques is that it can be done more intuitively than computing desired angular momentum, the latter having no direct visible reference. On the other hand, our approach is based on Newton's law, i.e., momentum rate change is completely determined by the external forces and torques. In contrast, the angular acceleration of the trunk cannot be completely determined from the external forces and torques unless the accelerations of other joints are also specified. If these joint accelerations are not incorporated in the force/torque computation, the computed values would be valid only for motions with negligible joint accelerations.
+
+%Sentis et al.~\cite{SPK10} developed a method to precisely control contact CoPs in a more general setting of multicontact interaction between a humanoid robot and the environment using a virtual-linkage model. Park et al.~\cite{Park07} showed that many balancing problems can be framed as the second-order cone programming problem.
+
+%Unlike the above-mentioned approaches which involve distributing the net GRF and net CoP to the supporting feet, Sugihara and Nakamura~\cite{Sugihara03,Sugihara03b} take a different approach that computes the desired acceleration of CoM from the desired foot GRFs and foot CoPs, and then resolves the joint motion to realize the desired acceleration of CoM. This method has the merit of offering an easy manipulation of contact state between individual foot and the ground but, as mentioned in \cite{Sugihara03,Sugihara03b} by the authors themselves, is not guaranteed to realize the desired foot CoP and GRF during double support.
+
+Ugurlu and Kawamura have studied bipedal walking that
+specifically controls the centroidal angular momentum~\cite{UK10}.
+Relatively recently we have seen a comprehensive
+study of angular momentum during human gait~\cite{HP08}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Comparison with ZMP-based control}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Earlier approaches to humanoid walking control involved planning joint motions such that a 
+given reference ZMP trajectory was achieved \cite{nishiwaki2001online}.
+The motion planning was performed offline, and the resulting joint trajectories were then tracked 
+using PID or similar controllers.
+The problem with this approach is that it is very brittle;  it is not robust to balance disturbances
+because the joint controllers have no knowledge about the relation between CoM and ZMP, which is 
+fundamental to balance.
+This basic approach of playing back pre-computed joint trajectories has also been used extensively
+in hobby robots such as the ones used in the Robo One competitions \cite{roboone}.  
+The result is predictable;  the robots fall over very easily.
+Despite its problems, a key advantage of this approach is that it does not require use of an
+\textit{Inertial Measurement Unit} (IMU) to estimate key aspects of robot state, such as CoM position
+and velocity.  
+This has become less of an advantage in recent years as the price of accurate 
+IMU units has dropped dramatically.
+Robot state estimation will be discussed in more detail, subsequently.
+
+An early variation of the pre-computed trajectory approach involved computing the joint motions 
+online, but still with the goal of following a reference ZMP trajectory \cite{nishiwaki2002online, 
+kagami2002fast, sugihar2002real}.  
+While this is an improvement in that it doesn't blindly follow
+joint trajectories, it still has a fundamental problem.
+As will be explained in more detail in the next section, the ZMP is not the desired quantity to be
+controlled. 
+The actual quantity to be controlled is momentum, or, related to this, the position and velocity of the 
+robot's CoM.
+The ZMP is, effectively, a control input;  manipulation of the ZMP has the effect of accelerating the CoM.
+Thus, while using a reference ZMP trajectory as a feed-forward term may be useful,
+tracking a reference ZMP trajectory exclusively, without feedback terms based on the true
+quantities to be controlled (CoM state), results in an unstable system.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Computing Momentum of a Humanoid Robot}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -542,7 +889,7 @@ Gathering all of the link velocities and joint velocities together, the system J
 %
 where %
 \begin{equation}
-\bv = \left[ \vv_1^T, \, \vv_2^T, \cdots \vv_i^T, \cdots \vv_N^T \right]^T \, .
+\bv = \left[ \bv_1^T, \, \bv_2^T, \cdots \bv_i^T, \cdots \bv_N^T \right]^T \, .
 \end{equation}
 
 The elements of the system Jacobian are just the Jacobians for each of the links:
@@ -632,7 +979,7 @@ coordinate frame.  A convenient frame is one set at the
 instantaneous CoM or the centroid of the system
 $G$, and whose coordinate axes are parallel to those of the inertial coordinate frame 0.
 The $6\times 1$ centroidal momentum vector $\bh_G$, which
-consists of the linear and centroidal angular momenta of the robot, is the aggregate momentum with respect to the above-mentioned centroial frame.
+consists of the linear and centroidal angular momenta of the robot, is the aggregate momentum with respect to the above-mentioned centroidal frame.
 Noting that the spatial momentum may be projected as any other
 force-type vector~\cite{FeOr08}, the following equation may be used to calculate
 the spatial momentum at the centroid of the system (see Fig.~\ref{biped}):
@@ -790,7 +1137,7 @@ which
 %Equation~\ref{eq:Ag}
 shows the relationship between $\bA_G$ and the system inertia and Jacobian.
 Furthermore, time differentiation of Eq.~\ref{eq:centroidalmomentum} results in the following relation
-which forms the basis of our momentum-based balance controller presented later in this chatper:
+which forms the basis of our momentum-based balance controller presented later in this chapter:
 \begin{equation}
 \label{eq:hGdot}
 \vdh_G = \bA_G \, \vddq + \dot\bA_G \, \bqd \; .
@@ -799,364 +1146,30 @@ which forms the basis of our momentum-based balance controller presented later i
 Finally, since $\Bf=\vdh_G$ (Newton's equations of motion) where $\Bf$ is the net external force/moment on the system, then it may be noted that $\bA_G$ gives the relationship between the net external force/moment and the joint accelerations.
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Why momentum control is important}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-Until recently, most balance control techniques
-have attempted to maintain balance by controlling
-only the linear motion of a robot.
-For example, Kagami et al.~\cite{Kagami00} and
-Kudoh et al.~\cite{Kudoh02} proposed methods to change
-the input joint angle trajectories to modify the position of the
-Center of Pressure (CoP), a point within the robot's support area through
-which the resultant Ground Reaction Force (GRF) acts.
-When the CoP, computed from the input joint motion, leaves the
-support base, indicating a possible toppling of a foot,
-the motion is modified to bring the CoP back inside the
-support base while the robot still follows the desired linear
-motion of the Center of Mass (CoM). The rotational motion of the
-robot remains more or less ignored in these approaches.
-
-However, rotational dynamics of a robot plays a
-significant role in balance~\cite{KLKK05}.
-%A control strategy narrowly focusing only on the linear CoM
-%motion can inadvertently allow unnecessary and potentially harmful
-%rotational motion of the robot.
-%Previous balance controllers %that primarily focused on the linear motion of a robot
-%avoided this problem somewhat heuristically, e.g.,
-%by kinematically controlling the orientation of the trunk or
-%by adding a specific joint space controller~\cite{Hyon07}.
-%A more principled approach would be to control
-%the robot's rotational dynamics directly. Indeed, e
-Experiments on human balance control also show that
-humans tightly regulate angular momentum during gait~\cite{PHH04},
-which suggests the strong possibility that angular momentum
-may be important in humanoid movements.
-
-In fact, both angular and linear momenta
-must be regulated to completely control the CoP. The fundamental quantities and the
-relations between them are schematically depicted in Fig.~\ref{fig:one2one} and described subsequently.
-\begin{figure}[h]
-\begin{center}
-\includegraphics[width=0.6\columnwidth]{Figures/one2one_new_line.pdf}%
-\caption{
-The external forces and torques in (a) are solely responsible
-for the centroidal momentum rate change in (b).
-(c): Linear momentum rate change $\vdl$ has a one-to-one
-correspondence with the GRF $\vf$.
-(d): The centroidal angular momentum rate change $\vdk$
-is determined by both $\vf$ and CoP location $\vp$.
-(e): Conversely, $\vp$ is determined by both
-$\vdl$ and $\vdk$. %
-}
-\label{fig:one2one}%
-\end{center}
-\end{figure}
-
-Fig.~\ref{fig:one2one}(a) shows all the external forces that act on a freely
-standing humanoid: the GRF $\vf$, the Ground Reaction Moment
-$\vtau_n$ normal to the ground, and the weight $m\bg$ of the robot,
-where $m$ is the total robot mass and $\bg$ is the acceleration due to gravity. The
-sums of external moments and external forces are equivalent to the rates of change of angular and linear momenta, respectively, of the robot, and the mathematical expressions for these relationships are given by (\ref{eq:vdk}) and (\ref{eq:vdl}). Fig.~\ref{fig:one2one}(b) depicts the robot's
- rate of change of angular momentum about the CoM, $\vdk$, and linear momentum, $\vdl$, respectively.
-\begin{align}
-	\vdk &= (\vp - \vr_G)\times\vf + \vtau_n \label{eq:vdk}\\
-	\vdl &= m\vg + \vf \label{eq:vdl}	
-\end{align}
-In the above equations, $\vr_G$ is the CoM location and $\vp$ is the CoP location.
-Together $\vk$ and $\vl$ is a $6\times 1$ vector constitute the spatial centroidal momentum
-$\vh_G=[\vk^T~\vl^T]^T$.
-In this chapter, we will call it spatial momentum, or simply the momentum of the robot. 
-%The aggregate momentum of a humanoid robot may be obtained by summing up all of the angular and linear momenta contributed by the individual link segments.  The centroidal momentum is this aggregate momentum of the robot projected to a reference point instantaneously located at its CoM.
-%Note that the spatial centroidal momentunm is computed with respect to a frame which is aligned to the world frame and located at the overall CoM of the robot. Also the frame is instantaneously frozen with respect to the world frame.
-
-Indeed, as noted in \cite{Macchietto09}, the (spatial) momentum
-rate change has a one-to-one relationship with the GRF and CoP.
-From (\ref{eq:vdl}) and as shown in Fig.~\ref{fig:one2one}(c), $\vdl$ is completely determined by
-$\vf$ and vice versa. Furthermore, from (\ref{eq:vdk}) and Fig.~\ref{fig:one2one}(d), a complete
-description of $\vdk$ needs both $\vf$ and
-$\vp$. Conversely, $\vp$ depends on both $\vdk$ and $\vdl$,  which is shown in Fig.~\ref{fig:one2one}(e).\footnote{The normal torque $\vtau_n$ also affects $\vdk$ in the
-transverse plane. Actually $\vf$, $\vp$, and $\vtau_n$ together
-constitute the 6 variables that correspond to the 6 variables of the spatial momentum.
-Usually $\vtau_n$ is omitted in the discussion for simplicity
-because its magnitude is small.}
-This last sentence implies that a complete control of $\vp$ is impossible
-without controlling both momenta.%Due to this fact, attempts to control CoP by controlling
-%only CoM trajectory~\cite{Sugihara02} is fundamentally incomplete.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{A word on ground reaction force}
+%\subsection{A word on ground reaction force}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Related Work}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-Starting from the early work of~\cite{Vuko69}, researchers have
-developed numerous techniques for biped balance control
-using various approaches.
-Among these are joint control strategies using ankle or hip~\cite{Sano90,Stephens07},
-whole body control approaches~\cite{Kagami00,Sugihara02,KKKFHYH03,Choi07,Park05,Stephens10},
-methods that find optimal control policies~\cite{Zhou03,Muico09},
-and reflex controllers~\cite{Huang05}.
-In this section we focus on the research relevant
-to momentum-based balance control.
-
-The importance of angular momentum in humanoid walking was reported by Sano and
-Furusho as early as 1990~\cite{Sano90}. However, it was much later before its
-importance for balance maintenance
-of human and humanoid robots started to be seriously explored~\cite{KKKFHYH03,Goswami04,PHH04}.
-Sano and Furusho~\cite{Sano90}, and Mitobe et al.~\cite{Mitobe04}
-showed that it is possible to generate the desired angular momentum
-by controlling the ankle torque.
-Kajita et al.~\cite{KKKFHYH03} included angular momentum criteria into the
-whole body control framework for balance maintenance.
-After expressing desired linear and angular momenta as linear functions of the
-generalized velocities, they determined the joint velocities
-that achieved both momenta.
-
-Komura et al.~\cite{KLKK05} presented a balance controller that can counteract
-rotational perturbations using the Angular Momentum Pendulum Model (AMPM).
-This model augments the well known 3D Linear
-Inverted Pendulum Model (LIPM)~\cite{KKKYH01} with the additional capability of possessing
-centroidal angular momentum.
-Naksuk et al.~\cite{Naksuk04} proposed an iterative method
-to compute joint trajectories of humanoid robots to satisfy the desired CoM trajectory
-and to minimize the centroidal angular momentum.
-Other papers that deal with angular momentum for balance
-and gait include \cite{Sian03,Ahn06,Ugurlu10,Ye10,Lasa10}.
-
-Abdallah and Goswami~\cite{AG05} defined balance control objectives
-in terms of CoM and CoP, and achieved this goal by controlling
-the rate of change of linear and angular momenta of a reduced model
-humanoid robot. The joint accelerations to generate the target
-momentum rate change were resolved using the Moore-Penrose pseudo-inverse.
-
-Hofmann et al.~\cite{Hofmann09} presented a method that
-controls CoM by modulating angular momentum under large
-external perturbations. It gives higher priority to controlling
-linear momentum over angular momentum to enhance the performance
-of the balance controller.
-%We also give higher priority to attaining the desired linear momentum when both momenta cannot be simultaneously satisfied.
-
-%Our method improves the method in \cite{KKKFHYH03} by providing a step to check for the admissibility of the desired values of linear and angular momenta. Our work is also different from \cite{AG05} and \cite{Macchietto09} in that we define the balance control objectives more intuitively in terms of linear and angular momenta and not in terms of the net CoP.
-
-%Furthermore, our method computes contact forces at each support foot, and therefore can be used both during double-support and single-support and also on non-level, discrete, and non-stationary grounds, whereas \cite{AG05,Macchietto09,Hofmann09} consider only single-support.
-
-Table~\ref{tab:comparison} illustrates how the existing methods treat momentum,
-GRF, and CoP in formulating balance and gait strategies.
-Robot gait planning methods using reduced models such
-as \cite{KKKYH01,Choi07} (Table~\ref{tab:comparison} (a))
-compute the necessary CoM trajectory which ensures balance
-for a specified desired CoP trajectory.
-This is done using reduced models such as the LIPM.
-As can be seen from Fig.~\ref{fig:one2one}(e) CoP depends  on both
-linear and angular momenta rate changes, so
-CoM cannot be uniquely determined solely from CoP.
-This was possible in \cite{KKKYH01,Choi07} because the reduced model used in those works
-approximated the robot as a point mass, which
-can only possess a {\it zero} angular momentum.
-%In other words, the resulting CoP-CoM trajectory
-%calculated this way induces the unnatural zero rate of change of angular momentum.
-
-In the Resolved Momentum Control approach\cite{KKKFHYH03},
-both desired linear and angular momenta are used to determine
-joint motion for posture change (Table~\ref{tab:comparison} (b)).
-However, the admissibility of the CoP is not considered so the
-robot may lose balance if the values of input desired momenta are high.
-The methods in Table~\ref{tab:comparison} (c) determine
-the desired angular momentum rate change given desired CoP and linear momentum rate change.
-In our current method (Table~\ref{tab:comparison} (d)), starting
-from the desired linear/angular momenta rate changes, we first determine
-admissible foot GRFs and CoPs, and then compute corresponding admissible
-momenta rate changes.
-
-\begin{table}[h]
-%\begin{minipage}[t]{1.9\columnwidth}
-\begin{center}
-\caption{The diagrams show how each method
-on balance control or gait pattern generation
-treats momenta ($\vk,\vl$), GRF ($\vf$),
-and CoP ($\vp$). A pair of solid lines determines the target value together.
-The dotted line shows the determination process of linear motion and force.
-The subscript ``d'' indicates a desired input to the controller
-and superscript ``$\ast$'' indicates that the quantity is used to determine control
-output such as joint torques.}
-\begin{tabular}{c|c|c|c}
-\hline
-{\scriptsize (a) Kajita } & {\scriptsize (b) Kajita } & {\scriptsize (c) Abdallah and }  & {\scriptsize (d) Lee and }  \\
-
-{\scriptsize et al.~\cite{KKKYH01}, } & {\scriptsize et al.~\cite{KKKFHYH03}} & {\scriptsize Goswami~\cite{AG05},} & {\scriptsize Goswami~\cite{LeeGoswami10},}\\
-
-{\scriptsize Choi et }& &{\scriptsize Macchhietto} & {\scriptsize~\cite{LG12}}\\
-{\scriptsize al.~\cite{Choi07}}& &{\scriptsize et al.~\cite{Macchietto09}} & \\
-\hline
-\hline
-\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-LIPM.pdf}
-&
-\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-resolvedMomentum.pdf}
-&
-\includegraphics[width=0.13\columnwidth]{Figures/lkpf-diagram-maccietto.pdf}
-&
-\includegraphics[width=0.23\columnwidth]{Figures/lkpf-diagram-LeeGoswami.pdf} \\
-\hline
-\end{tabular}
-\label{tab:comparison}
-\end{center}
-%\end{minipage}
-\end{table}
-
-
-%Hyon et al.~\cite{Hyon07} presented a method to resolve foot GRFs and foot CoPs such that they minimize the sum of the squared norm of forces at some points on the boundary of the foot sole while satisfying the desired net GRF and CoP. Their passivity-based controller can remarkably adapt to unknown rough terrain and non-level ground~\cite{Hyon09}. Abe et al.~\cite{Abe07} represented foot GRFs and CoPs in a similar manner to \cite{Hyon07}. This method can minimize each foot GRF if the contact points are well distributed over the foot-ground contact surface. In this paper, we propose a method to distribute the foot GRFs to both feet optimally while minimizing the ankle torques during the double support. Fig.~\ref{fig:FootMinComparison} compares the previous works with our method. 
-
-
-%In another important work on the control of external forces and torques at each individual foot,
-%Fujimoto et al.~\cite{Fujimoto98a,Fujimoto98b,Fujimoto98c} resolved foot GRFs and torques simultaneously using a quadratic programming method.
-%In contrast, we  resolve foot GRFs and foot CoPs sequentially, using two least-squares problems, each of which can be solved very quickly. Another notable difference between our work and that of \cite{Fujimoto98a,Fujimoto98b,Fujimoto98c} is that the latter computed external forces and torques from desired accelerations of CoM and trunk orientation whereas we compute them from desired linear and angular momenta rate changes. The advantage of computing desired trunk orientation from external forces and torques is that it can be done more intuitively than computing desired angular momentum, the latter having no direct visible reference. On the other hand, our approach is based on Newton's law, i.e., momentum rate change is completely determined by the external forces and torques. In contrast, the angular acceleration of the trunk cannot be completely determined from the external forces and torques unless the accelerations of other joints are also specified. If these joint accelerations are not incorporated in the force/torque computation, the computed values would be valid only for motions with negligible joint accelerations.
-
-%Sentis et al.~\cite{SPK10} developed a method to precisely control contact CoPs in a more general setting of multicontact interaction between a humanoid robot and the environment using a virtual-linkage model. Park et al.~\cite{Park07} showed that many balancing problems can be framed as the second-order cone programming problem.
-
-%Unlike the above-mentioned approaches which involve distributing the net GRF and net CoP to the supporting feet, Sugihara and Nakamura~\cite{Sugihara03,Sugihara03b} take a different approach that computes the desired acceleration of CoM from the desired foot GRFs and foot CoPs, and then resolves the joint motion to realize the desired acceleration of CoM. This method has the merit of offering an easy manipulation of contact state between individual foot and the ground but, as mentioned in \cite{Sugihara03,Sugihara03b} by the authors themselves, is not guaranteed to realize the desired foot CoP and GRF during double support.
-
-Ugurlu and Kawamura have studied bipedal walking that
-specifically controls the centroidal angular momentum~\cite{UK10}.
-Relatively recently we have seen a comprehensive
-study of angular momentum during human gait~\cite{HP08}.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Comparison with ZMP-based control}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Earlier approaches to humanoid walking control involved planning joint motions such that a 
-given reference ZMP trajectory was achieved \cite{nishiwaki2001online}.
-The motion planning was performed offline, and the resulting joint trajectories were then tracked 
-using PID or similar controllers.
-The problem with this approach is that it is very brittle;  it is not robust to balance disturbances
-because the joint controllers have no knowledge about the relation between CM and ZMP, which is 
-fundamental to balance.
-This basic approach of playing back pre-computed joint trajectories has also been used extensively
-in hobby robots such as the ones used in the Robo One competitions \cite{roboone}.  
-The result is predictable;  the robots fall over very easily.
-Despite its problems, a key advantage of this approach is that it does not require use of an
-\textit{Inertial Measurement Unit} (IMU) to estimate key aspects of robot state, such as CM position
-and velocity.  
-This has become less of an advantage in recent years as the price of accurate 
-IMU units has dropped dramatically.
-Robot state estimation will be discussed in more detail, subsequently.
-
-An early variation of the pre-computed trajectory approach involved computing the joint motions 
-online, but still with the goal of following a reference ZMP trajectory \cite{nishiwaki2002online, 
-kagami2002fast, sugihar2002real}.  
-While this is an improvement in that it doesn't blindly follow
-joint trajectories, it still has a fundamental problem.
-As will be explained in more detail in the next section, the ZMP is not the desired quantity to be
-controlled. 
-The actual quantity to be controlled is momentum, or, related to this, the position and velocity of the 
-robot's CM.
-The ZMP is, effectively, a control input;  manipulation of the ZMP has the effect of accelerating the CM.
-Thus, while using a reference ZMP trajectory as a feed-forward term may be useful,
-tracking a reference ZMP trajectory exclusively, without feedback terms based on the true
-quantities to be controlled (CM state), results in an unstable system.
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Control Problem Statement}
-\label{sec:problemstatement}
+%\section{Control Problem Statement}
+%\label{sec:problemstatement}
+\section{Approaches to Momentum-Based Balance Control}
+\label{sec:approaches}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-In this section, we introduce the types of tasks that we would like a humanoid robot to perform, and define what it means to maintain
-balance while performing these tasks.  We also discuss the implied requirements for a balance controller.
+%In this section, we introduce the types of tasks that we would like a humanoid robot to perform, and define what it means to maintain balance while performing these tasks.  We also discuss the implied requirements for a balance controller.
 
 % First, introduce tasks to be accomplished, and how they should be specified
 
-\subsection{Humanoid Robot Tasks and their Specification}
-
-Humanoid bipedal morphologies have unique characteristics that provide significant advantages (and some disadvantages) over quadruped or wheeled robots. 
-Key functional features of the humanoid morphology include a variable base of support and a high center of mass.
-Because bipeds have only two legs, their support base is naturally constrained, allowing them to operate in environments where support base space is limited; 
-many human environments require this. 
-The legs can also be placed in wide stances, when space permits, enhancing stability against disturbances.
-The feet can also be placed in specific locations, allowing for traversal over terrain where foot placement is constrained due to obstacles.
-Thus, a key advantage of the humanoid morphology is that the variable base of support allows both for operation in constrained spaces, 
-as well as stability against disturbances, 
-Humanoid bipeds also have a high center of mass.  
-This has the advantage that an elevated ``sensor package'' can be supported; when standing erect, the head can see over obstacles. 
-
-An example task for such a system is to walk to a moving soccer ball and kick it, as shown in Figure \ref{fig:Soccer1}.  
-Stepping movement must be synchronized with ball movement so that the kick happens when the ball is close enough.  
-More generally, such tasks require that the biped be in an acceptable location and pose at an acceptable time.  
-This implies spatial and temporal constraints for such tasks.  
-There are also important dynamic balance constraints that limit the kinds of movements the biped may make without falling down.
-
-\begin{figure}[b]
- \subfigure[]
-    {
-       \label{fig:SoccerKick}
-       \includegraphics[height=1.5in]{SoccerKick}
-    }
- \subfigure[]
-   {
-       \label{fig:SoccerTrip}
-       \includegraphics[height=1.5in]{SoccerTrip}
-   }\vspace{-10pt}
-\caption{Kicking soccer ball task, interrupted by trip disturbance}
-\label{fig:Soccer1}
-\end{figure}
-
-If the system encounters a disturbance while performing a task, it will have to compensate in some way in order to satisfy these constraints.  
-The disturbance may cause a delay, allowing another player to kick the ball, or it may interfere with movement synchronization.  
-For example, a trip, shown in Figure \ref{fig:SoccerTrip} causes disruption of synchronization between the stepping foot, and the overall forward movement 
-of the system’s center of mass. 
-
-Another example task is walking on a constrained foot path, such as stones across a brook, or on a balance beam.  
-As with the soccer ball example, this task has spatial, temporal, and dynamic constraints, but in this case, the spatial constraints are more stringent;  
-the biped must reach its goal using foot placements that are precisely constrained. 
-Figure \ref{fig:WalkOnStonesIntro1} shows a biped walking over blocks that constrain foot placement.  
-When foot placement is constrained, the stepping pattern can’t be changed arbitrarily to compensate for a disturbance.  
-For example, if a lateral push disturbance occurs, rather than stepping the leg out to the side, other compensating techniques, 
-such as angular movement of the body and swing leg must be used, as shown in Figure \ref{fig:LatPushIntro1}.
-
-\begin{figure}[b]
-\includegraphics[height=1.5in]{WalkOnStonesIntro1}
-\caption{Dynamic walking with foot placement constraints.}
-\label{fig:WalkOnStonesIntro1}       
-\end{figure}
-
-\begin{figure}[b]
-\includegraphics[height=1.5in]{LatPushIntro1}
-\caption{Compensating for lateral push disturbance using angular movement of torso and swing leg.}
-\label{fig:LatPushIntro1}       
-\end{figure}
-
-In these examples, and others like them, the key challenge is to move the humanoid,
-a complex, dynamic system, to an acceptable pose at an acceptable time, despite actuation limits, and despite disturbances.
-The system should be able to recover from disturbances such as slips, trips, pushes, and ground contact instability due to soft terrain, 
-even when foot placement is constrained.  
-In particular, it should utilize flexibility in the task specification to achieve its goals.
-For example, it may temporarily sacrifice a goal of maintaining an upright pose in order to achieve balance goals.
-
-We seek to develop a robust plan execution system capable of guiding a robotic biped through a series of walking task goals, in the presence of disturbances.  
-The system must understand commands at the task level;  it must take as input a high-level specification of where it should be, and by what time, and then 
-automatically figure out the details of how to move to accomplish these goals.  
-It should also be able to automatically detect whether a task that it is given can be accomplished in the allotted time, and should warn the human operator 
-when this is not the case.  
-If a disturbance occurs during execution of the task, the system should attempt to compensate in order to avoid a fall, and should still try to 
-complete the task on time.  
-If this is not possible, the system should alert the user, or a higher-level control authority, and should prepare itself for failure.
-For example, if a fall is inevitable, it should put out its hands to break the fall.
 
 
 
-\subsection{Humanoid Robot Balance Control}
+\subsection{Centroidal-Moment Point-Based Balance Control }
 
 Not all tasks for humanoid forms necessarily require balance as an end goal. 
 For example, a football player trying to score a touchdown, or a baseball player trying to catch a fly ball,
@@ -1167,8 +1180,8 @@ For the subsequent discussion, however, we assume that balance control is includ
 % achieved.
 
 This naturally leads us to the need for a precise definition of balance control.
-Consider a horizontal plane that intersects the CM, and that is perpendicular to the gravity vector.
-We define balance control as the ability to accelerate the CM in any direction in this 
+Consider a horizontal plane that intersects the CoM, and that is perpendicular to the gravity vector.
+We define balance control as the ability to accelerate the CoM in any direction in this 
 horizontal plane.
 
 % Make this a formal definition?  Show diagram of plane, or is this obvious?
@@ -1194,10 +1207,10 @@ A key difference in the model presented here is its ability to
 purposely sacrifice angular momentum control goals in order to achieve linear control goals when both cannot be met.  
 
 The model makes use of a number of physical points that summarize the system’s balance state.  
-These points are the center of mass (CM), the zero-moment point (ZMP) \cite{vukobratovic69},
+These points are the center of mass (CoM), the zero-moment point (ZMP) \cite{vukobratovic69},
 and the centroidal-moment point (CMP) \cite{popovic2005ground}.  
 The ZMP is a point on the ground that represents the combined force interaction of all ground contact points.  
-The CMP is the point on the ground from which the ground reaction force would have to emanate if it were to produce no torque about the CM. 
+The CMP is the point on the ground from which the ground reaction force would have to emanate if it were to produce no torque about the CoM. 
 These points will be defined more formally in the following discussion.
 
 % Support base
@@ -1218,21 +1231,21 @@ point of contact with the ground:
 
 \noindent where $\mathbf{F}_{gr} \left( x, y \right)$ is the incremental force at point $x,y$ on the ground, and $BOS$ refers to the base of support region.
 
-% CM
-The CM is the weighted mean of the positions of all points in the system, where the weight applied to each point is the point’s mass.  Thus, for a discrete distribution of masses $m_i$, located at positions $\mathbf{r}_i$, the position of the center of mass is given by
+% CoM
+The CoM is the weighted mean of the positions of all points in the system, where the weight applied to each point is the point’s mass.  Thus, for a discrete distribution of masses $m_i$, located at positions $\mathbf{r}_i$, the position of the center of mass is given by
 
 \begin{equation}
-\mathbf{CM} = \frac{\sum_i m_i \mathbf{r}_i}{\sum_i m_i}
-\label{eq:CM}
+\mathbf{CoM} = \frac{\sum_i m_i \mathbf{r}_i}{\sum_i m_i}
+\label{eq:CoM}
 \end{equation}
 
 \noindent A bipedal mechanism consists of a set of articulated links, each of which is a rigid body with mass $m_i$.
-Each rigid body has its own CM at a point $\mathbf{r}_i$.
+Each rigid body has its own CoM at a point $\mathbf{r}_i$.
 
-The CM represents the effective mass of the system, concentrated at a single point.  
-This is valuable because it allows for simplifying the balance control problem to one of keeping the CM in the right place at the right time.  
+The CoM represents the effective mass of the system, concentrated at a single point.  
+This is valuable because it allows for simplifying the balance control problem to one of keeping the CoM in the right place at the right time.  
 Furthermore, the control dynamics of this point is expressed, simply, by Newton’s law, $\mathbf{F}_{gr} = m \mathbf{a}$, where $m$ is the total
-mass of the system, and $\mathbf{a}$ is the resulting acceleration of the CM.
+mass of the system, and $\mathbf{a}$ is the resulting acceleration of the CoM.
 
 % ZMP
 Vukobratovic and Stepanenko defined the ZMP as the point of resulting reaction forces at the contact surface between the extremity and the ground \cite{vukobratovic1972stability};  
@@ -1244,44 +1257,44 @@ of these points, the ZMP is always inside the biped’s base of support \cite{Go
 
 We designate the horizontal axes as x and y, where x represents the anterior-posterior direction, and y the medio-lateral direction.
 The designate the vertical axis as z (positive direction is upwards).
-The position of the ZMP along these axes, $x_{ZMP}$ and $y_{ZMP}$ can be expressed in terms of CM position, force, and moment as
+The position of the ZMP along these axes, $x_{ZMP}$ and $y_{ZMP}$ can be expressed in terms of CoM position, force, and moment as
 
 \begin{eqnarray}
-x_{ZMP} = x_{CM} - \frac{F_{grx}}{F_{grz}} z_{CM} - \frac{\tau_y}{F_{grz}}\\
-y_{ZMP} = y_{CM} - \frac{F_{gry}}{F_{grz}} z_{CM} + \frac{\tau_x}{F_{grz}}
+x_{ZMP} = x_{CoM} - \frac{F_{grx}}{F_{grz}} z_{CoM} - \frac{\tau_y}{F_{grz}}\\
+y_{ZMP} = y_{CoM} - \frac{F_{gry}}{F_{grz}} z_{CoM} + \frac{\tau_x}{F_{grz}}
 \label{eq:ZMP}
 \end{eqnarray}
 
-\noindent where $x_{cm}$, $y_{cm}$, and $z_{cm}$ are the $x$, $y$, and $z$ positions of the CM, $F_{grx}$, $F_{gry}$, and $F_{grz}$ are the ground 
-reaction forces in the $x$, $y$, and $z$ directions, and $\tau_x$ and $\tau_y$ are the CM moments about the x and y axes, respectively.
+\noindent where $x_{cm}$, $y_{cm}$, and $z_{cm}$ are the $x$, $y$, and $z$ positions of the CoM, $F_{grx}$, $F_{gry}$, and $F_{grz}$ are the ground 
+reaction forces in the $x$, $y$, and $z$ directions, and $\tau_x$ and $\tau_y$ are the CoM moments about the x and y axes, respectively.
 
-Because the gravitational force is purely vertical, $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CM.  The net vertical CM force, $F_z$,
+Because the gravitational force is purely vertical, $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CoM.  The net vertical CoM force, $F_z$,
 is $F_z = F_{grz} - Mg$, where $g$ is the gravitational acceleration and $M$ is the total mass.
-The ZMP is always inside the support base \cite{popovic2005ground}.  If the moments in Eq. (2) are zero, the ground reaction force vector points directly at the CM, as shown in Fig. \ref{fig:Fig1} A.
+The ZMP is always inside the support base \cite{popovic2005ground}.  If the moments in Eq. (2) are zero, the ground reaction force vector points directly at the CoM, as shown in Fig. \ref{fig:Fig1} A.
 
 % CMP
 The \textit{Centroidal Moment Pivot} (CMP) is the point on the ground, not necessarily within the support base, from  which the observed net ground reaction 
-force vector would have to act in order to generate no torque about the CM (for $\tau_x$ and $\tau_y$ in \ref{eq:ZMP} to be 0).
-Thus, it is that point where a line parallel to the ground reaction force vector, passing through the CM, intersects with the ground, 
+force vector would have to act in order to generate no torque about the CoM (for $\tau_x$ and $\tau_y$ in \ref{eq:ZMP} to be 0).
+Thus, it is that point where a line parallel to the ground reaction force vector, passing through the CoM, intersects with the ground, 
 as shown in Fig. \ref{fig:Fig1} B.  
 The CMP can be expressed as
 
 \begin{equation}
-\left( \mathbf{r}_{CMP} - \mathbf{r}_{CM} \right) \times \mathbf{F}_{gr} = 0
+\left( \mathbf{r}_{CMP} - \mathbf{r}_{CoM} \right) \times \mathbf{F}_{gr} = 0
 \label{eq:CMP}
 \end{equation}
 
 Expanding this cross product yields
 
 \begin{eqnarray}
-x_{CMP} = x_{CM} - \frac{F_{grx}}{F_{grz}} z_{CM}\\
-y_{CMP} = y_{CM} - \frac{F_{gry}}{F_{grz}} z_{CM}
+x_{CMP} = x_{CoM} - \frac{F_{grx}}{F_{grz}} z_{CoM}\\
+y_{CMP} = y_{CoM} - \frac{F_{gry}}{F_{grz}} z_{CoM}
 \label{eq:CMP2}
 \end{eqnarray}
 
-\noindent Note that because $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CM, this relation can be used to compute horizontal CM force 
-as a function of CM position, CMP point location, and vertical ground reaction force.  
-Such horizontal forces are critical for maintaining bipedal stability since they can be applied to change CM state to desired values.  
+\noindent Note that because $F_{grx}$ and $F_{gry}$ are the net horizontal forces on the CoM, this relation can be used to compute horizontal CoM force 
+as a function of CoM position, CMP point location, and vertical ground reaction force.  
+Such horizontal forces are critical for maintaining bipedal stability since they can be applied to change CoM state to desired values.  
 
 By combining Eqs. \ref{eq:ZMP} and \ref{eq:CMP2}, we obtain a relation between ZMP and CMP:
 
@@ -1291,30 +1304,30 @@ y_{CMP} = y_{ZMP} - \frac{\tau_x}{F_{grz}}
 \label{eq:CMP3}
 \end{eqnarray}
 
-Eq. \ref{eq:CMP3} shows that when there is no horizontal moment about the CM, the CMP and ZMP points coincide.  
-In this case, the ground reaction force vector points directly to the CM, as shown in Fig. \ref{fig:Fig1} A.  
-Conversely, when there is a horizontal moment about the CM, the CMP and ZMP diverge.  
-The horizontal separation distance between these points is the moment arm for the CM moment due to vertical force, $F_{grz}$, as shown in Fig. \ref{fig:Fig1} B.  
+Eq. \ref{eq:CMP3} shows that when there is no horizontal moment about the CoM, the CMP and ZMP points coincide.  
+In this case, the ground reaction force vector points directly to the CoM, as shown in Fig. \ref{fig:Fig1} A.  
+Conversely, when there is a horizontal moment about the CoM, the CMP and ZMP diverge.  
+The horizontal separation distance between these points is the moment arm for the CoM moment due to vertical force, $F_{grz}$, as shown in Fig. \ref{fig:Fig1} B.  
 Note that as the CMP and ZMP diverge, the ZMP must remain within the support base, but the CMP may leave the region of support. 
 
-\begin{figure}[b]
+\begin{figure}%[b]
 \includegraphics[height=2in]{Fig1}
-\caption{As shown in A), if there is no moment about the CM, the ground reaction force points from the ZMP to the CM position.  As shown in  B),  if there is a moment about the CM, the ZMP and CMP diverge, where the separation distance is the moment arm associated with the vertical force, $F_{grz}$.
+\caption{As shown in A), if there is no moment about the CoM, the ground reaction force points from the ZMP to the CoM position.  As shown in  B),  if there is a moment about the CoM, the ZMP and CMP diverge, where the separation distance is the moment arm associated with the vertical force, $F_{grz}$.
 (\copyright IEEE, 2009, reprinted with permission)}
 \label{fig:Fig1}       
 \end{figure}
 
-The relationship between the CM and CMP indicates the specific effect that the net ground reaction force has on CM translation. 
+The relationship between the CoM and CMP indicates the specific effect that the net ground reaction force has on CoM translation. 
 Because the observed net ground reaction force always operates at the ZMP which is within the support base, 
-whenever the net ground reaction force generates no torque about the CM, then the ZMP and CMP coincide. 
+whenever the net ground reaction force generates no torque about the CoM, then the ZMP and CMP coincide. 
 If the net ground reaction force generates torque, however, then the CMP and ZMP differ in location, and, in particular, the CMP may be outside 
 the support base. 
 
-It is sometimes desirable to have the CMP and ZMP diverge as shown in Fig. 1B so that horizontal CM forces can be more effectively controlled.  
+It is sometimes desirable to have the CMP and ZMP diverge as shown in Fig. 1B so that horizontal CoM forces can be more effectively controlled.  
 In this case the CMP can be displaced from the ZMP which reflects the increased ability of the net ground reaction force to 
-affect translation of the CM. 
-The associated moment about the CM generally produces undesirable effects, such as loss of upright orientation of the upper body.  
-In many cases, these effects are temporary, can be managed, and are well worth the overall positive effect on CM position and velocity.  
+affect translation of the CoM. 
+The associated moment about the CoM generally produces undesirable effects, such as loss of upright orientation of the upper body.  
+In many cases, these effects are temporary, can be managed, and are well worth the overall positive effect on CoM position and velocity.  
 For example, a tightrope walker will tolerate temporary angular instability if this means that he won’t fall off the tightrope.  
 
 Use of the CMP is demonstrated in Figure \ref{fig:LateralDisturbanceRecovery}, which depicts recovery from a lateral disturbance.  
@@ -1322,64 +1335,34 @@ This sequence shows an initial disturbance that pushes the biped to the right.
 To compensate, the system takes control actions involving rotation of the body and swing leg, that move its CMP to the right, 
 creating a lateral compensating force to the left.  
 Because the disturbance is significant, the CMP moves beyond the edge of the support polygon, and thus, it does not coincide with the ZMP.  
-This compensating action corresponds to a clockwise torque about the CM, which is manifested by clockwise rotation of the torso and right leg.  
+This compensating action corresponds to a clockwise torque about the CoM, which is manifested by clockwise rotation of the torso and right leg.  
 
-\begin{figure}[b]
+\begin{figure}%[b]
+\centering
  \subfigure[]
     {
        \label{fig:LateralDisturbance1}
-       \includegraphics[height=3in]{LateralDisturbance1}
+       \includegraphics[height=2.5in]{LateralDisturbance1}
     }
  \subfigure[]
    {
        \label{fig:CMP_recovery1}
-       \includegraphics[height=3in]{CMP_recovery1}
+       \includegraphics[height=2.5in]{CMP_recovery1}
    }\vspace{-10pt}
 \caption{Recovery from a lateral disturbance using CMP.}
 \label{fig:LateralDisturbanceRecovery}
 \end{figure}
 
-The model of balance control presented here, where requirements for balance are expressed in terms of CM, ZMP, CMP, and the support base 
+The model of balance control presented here, where requirements for balance are expressed in terms of CoM, ZMP, CMP, and the support base 
 is extremely useful for planning and control, due to its simplicity.  
 Balance control is then reduced to a problem of adjusting the base of support, adjusting the ZMP within the base of support, and, if necessary, performing motions 
-that generate angular momentum, so that the CMP can be moved, temporarily, outside the base of support, in order to exert additional compensating force on the CM.
+that generate angular momentum, so that the CMP can be moved, temporarily, outside the base of support, in order to exert additional compensating force on the CoM.
 
 
 
-\subsection{Balance Controller Requirements and Approach}
 
-We have assumed that balance control, as defined above, is an end goal for any task of interest here.
-This does not, however, imply that balance control (as defined above) must be maintained throughout the
-walking task.
-For example, with typical dynamic walking, the single support or ``stepping'' phase does not satisfy this constraint.
-With typical dynamic walking, the support leg pushes the CM to the opposite side, but, particularly at the end of this phase,
-is not able to push the CM to its side.
 
-[Need diagram here?]
 
-This is usually ok because the subsequent double support phase ``catches'' the system
-(the task specification should be flexible enough to not require full balance control throughout the task, only at the end).
-Thus, it is not uncommon for full balance control to be intermittent, and any controller should take this into account.
-Further, as discussed above, it is often desirable to sacrifice some posture goals in favor of balance control goals.
-Such sacrifice will typically be intermittent, in response to disturbances, allowing upright posture to be restored
-by the end of the task.
-The controller should be intelligent enough to take advantage of such flexibility in the task specification.
-
-This suggests that the controller framework should be equiped with some ``foresight'', allowing it to verify that end
-goals are achieved, even if they are not maintained throughout the task.
-A good approach for achieving such foresight is to use a \textit{Receding Horizon Model Predictive Controller} framework [cite].
-Such a controller essentially plans control actions over a limited (receding) time horizon.
-In this sense, it performs calculations similar to those of a motion planner.
-However, the purposes for these calculations are very different.
-Whereas the purpose of the calculations in a motion planner is to generate detailed joint trajectories to be executed exactly, 
-the purpose of the calculations in the receding horizon controller is to guarantee that the next control action does not
-lead the system into an undesired state at the end of the horizon.
-This allows a receding horizon controller to accept uncontrollable balance single support phases if the subsequent double support
-phase is balance controllable.
-It allows a receding horizon controller to know that a temporary sacrifice of postural goals (a temporary utilization of the 
-angular momentum reservoir) is possible in response to a disturbance.
-
-% See emails with Ambarish.
 
 
 
@@ -1387,17 +1370,7 @@ angular momentum reservoir) is possible in response to a disturbance.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Task Specification and Execution}
-\label{sec:tasklevel}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-[Keep this short;  it is not the focus of this chapter.
-However, something should be mentioned;  reference previous papers.
-Talk to Ambarish.]
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Controller Formulation and Framework}
+\subsection{Momentum-Based Computed Torque Control }
 \label{sec:framework}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1556,33 +1529,34 @@ which have a quadratic time complexity.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Single Support}
+%\subsection{Single Support}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Double Support}
+%\subsection{Double Support}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Level and non-level surface}
+%\subsection{Level and non-level surface}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Arbitrary stationary surface}
+%\subsection{Arbitrary stationary surface}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Moving surface (bus, moving walkway, boat)}
+%\subsection{Moving surface (bus, moving walkway, boat)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Estimation of CM and reaction point movement state}
+%\subsection{Estimation of CoM and reaction point movement state}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Scenarios}
+\label{sec:scenarios}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1593,7 +1567,7 @@ which have a quadratic time complexity.
 In this section, we show how the momentum control framework introduced in Sec.~\ref{sec:framework} is employed to create stationary balance.
 
 %===================================================
-\subsubsection{Determination of the Desired Momentum.}
+\paragraph{Determination of the Desired Momentum:}
 \label{sec:obj_bal_con}
 %===================================================
 
@@ -1622,7 +1596,7 @@ the issue of how to set the desired angular momentum for more complex motions su
 future work.
 
 %===================================================
-\subsubsection{Prioritization between Linear and Angular Momenta}
+\paragraph{Prioritization between Linear and Angular Momenta:}
 \label{sec:prioritization}
 %===================================================
 
@@ -1686,7 +1660,7 @@ momentum and sacrifice angular momentum can also be found
 in the literature~\cite{Hofmann09,Stephens10} and in our recent work on stepping~\cite{YG11}.
 
 %===================================================
-\subsubsection{Admissible Foot GRF, Foot CoP, and Momentum Rate Change.}
+\paragraph{Admissible Foot GRF, Foot CoP, and Momentum Rate Change:}
 \label{sec:local_grf}
 %===================================================
 
@@ -1695,8 +1669,7 @@ rate change is as close as possible to the desired value.
 Admissible momentum rate change is determined by
 the admissible foot GRF and foot CoP.
 
-
-\paragraph{Single Support Case:}
+{\bf Single Support Case:}
 Dealing with single support case is straightforward
 because the foot GRF and CoP are uniquely determined
 from the desired momentum rate change, from (\ref{eq:vdk}) and (\ref{eq:vdl}):
@@ -1711,6 +1684,277 @@ If $\vf_d$ and $\vp_d$ computed above are valid, then these
 values are directly used. Otherwise, as mentioned previously, higher priority is given to linear
 momentum. If $\vf_d$ is outside the friction cone, it is projected
 onto the friction cone to prevent foot slipping.
+
+{\bf Double Support Case:}
+Determining foot GRFs and foot CoPs for double support is more involved. We refer the readers to the original paper~\cite{LG12} for details.
+
+
+
+%===================================================
+\paragraph*{Admissible Momentum Rate Change:}
+%===================================================
+After determining admissible foot GRF and foot CoP, the admissible
+momentum rate change $\vdh_a=[\vdk_a^T~\vdl_a^T]^T$ is also computed
+using (\ref{eq:vdk}) and (\ref{eq:vdl}) for single support, or (\ref{eq:vdk2}) and (\ref{eq:vdl2})
+for double support.
+
+%===================================================
+\paragraph{Determination of Joint Accelerations and Torques:}
+\label{sec:joint_acc}
+%===================================================
+
+After determining the admissible foot GRFs and foot CoPs, and admissible momentum
+rate changes, we compute joint accelerations and torques
+to realize them similarly to~\cite{Macchietto09}.
+
+%First, we resolve the desired joint accelerations  $\vddq$ for balance such that they satisfy (\ref{eq:const1}) and a variation of (\ref{eq:eom_base}).
+%To explain the latter let us first express the spatial centroidal momentum $\vh=[\vk^T~\vl^T]^T$ in terms of the generalized velocities:
+%\begin{equation}
+%	\vh = \mA(Q) \vdq   \, ,\label{eq:cmm1}
+%\end{equation}
+%where $\mA\in\real^{6\times (6+n)}$ is the centroidal momentum matrix~\cite{OG08} that linearly maps the generalized velocities to the spatial momentum. Differentiating (\ref{eq:cmm1}), we obtain
+%\begin{equation}
+%	\vdh = \mA \vddq + \mdA\vdq  \, .\label{eq:cmm}
+%\end{equation}
+
+%If we replace $\vdh$ with external forces  using Newton's law (refer to (\ref{eq:vdk}) and (\ref{eq:vdl})), then (\ref{eq:cmm}) expresses the aggregate motion of the dynamic system due to the external forces, which is exactly same as what (\ref{eq:eom_base}) represents. Note that the joint torques are not included in (\ref{eq:eom_base}). The only difference is the reference frame: (\ref{eq:cmm}) is expressed with respect to a frame at the CoM whereas (\ref{eq:eom_base}) is written with respect to the base frame. While either (\ref{eq:eom_base}) or (\ref{eq:cmm}) can be used, we choose to use (\ref{eq:cmm}) because our balance controller defines its objectives in terms of centroidal momenta.
+
+Specifically, we compute the output accelerations of the balance controller $\vddth$ such that they minimize the following objective function:
+\begin{equation}\begin{split}
+		\vddth_a = \underset{\vddth}{\operatorname{argmin}}~w_b|| \vdh_a - \mat{A}\vddq - \mdA\vdq  || + (1-w_b)|| \vddth^u_d - \vddth^u || \\
+		\text{s.t.~} \mJ\vddq + \mdJ\vdq = \va_d \quad \text{and} \quad \vddth_l \le \vddth \le \vddth_u  \, ,
+\end{split}
+\label{eq:ddq_a}
+\end{equation}
+where $\vdh_a$ is the admissible momentum rate change.
+We will call the output acceleration vector the admissible acceleration,
+and denote it by $\vddth_a$. Note that $\vddth_a$ contains all the joint 
+accelerations except those of the floating joints.
+Because there can be infinitely many solutions for $\vddth_a$
+that create $\vdh_a$, we have an additional optimality
+criteria in (\ref{eq:ddq_a}), which is to follow the desired joint acceleration of the upper body $\vddth^u_d$
+as closely as possible.
+One can set $\vddth^u_d$ to specify an upper-body task,
+or set $\vddth^u_d=\vzero$ to minimize the movement.
+The parameter $w_b (0 < w_b < 1)$ controls the relative
+importance between the balance objective (the first term)
+and the prescribed motion objective associated with the
+kinematic task (the second term).
+It is to be noted that $w_b$ should be close to 1
+in order to create admissible momentum rate, but it cannot be exactly 1
+because in this case (\ref{eq:ddq_a}) becomes indeterminate.
+$\va_d=[\va_{d,r}^T~\va_{d,l}^T]^T$ is the desired accelerations of the
+right and left feet.
+Section~\ref{sec:desired_feet} details how to determine $\va_d$.
+ Equation (\ref{eq:ddq_a}) can be easily converted to a
+least-squares problem with linear equality and bound constraints,
+and many solvers (e.g.,~\cite{lourakis04LM}~) are available for this type of problem.
+
+We set $\vddth_l$ and $\vddth_u$, the lower and upper bound
+of the joint accelerations, somewhat heuristically
+such that the joint limit constraints are satisfied (e.g.,
+$\vddth_u$ decreases when a joint angle approaches its upper limit).
+
+Finally, we compute the feedforward torque input $\vtau_{ff}$ from $\vddth_a$
+and the admissible external forces by performing inverse dynamics.
+Since external forces are explicitly specified for the
+support feet by (\ref{eq:nnls}) and (\ref{eq:opt_m})
+and joint accelerations are set by (\ref{eq:ddq_a}),
+we have all the necessary information for inverse dynamics.
+Specifically, we use the hybrid system dynamics algorithms \cite{Featherstone87},
+which is useful for performing inverse dynamics for floating-base
+mechanisms.
+
+%(?? How does this comment relate to the fact that you are
+%not currently using the GRF values measured by the ankle force sensors? --> They don't seem to be related..I think they are separate issues.
+%Would anything change here if you do decide to use the force/torque sensor data?)
+
+Overall torque input is determined by adding feedback terms:
+\begin{align}
+	\vtau_s &= \vtau_{ff} + \vtau_{fb} \label{eq:tau_s}\\
+	\vtau_{fb} &= \mGamma_p ( \vth^\ast - \vth ) + \mGamma_d ( \vdth^\ast - \vdth ) \, ,
+\end{align}
+where $\mGamma_p=\diag(\gamma_{p,i})$ and $\mGamma_d=\diag(\gamma_{d,i})$ are proportional and derivative gains, respectively.
+Position and velocity commands $\vth^\ast$, $\vdth^\ast$ are determined from
+the time integration of $\vddth_a$.
+
+
+%===================================================
+\paragraph{Desired Motion of the Feet}
+\label{sec:desired_feet}
+%===================================================
+We set the desired foot accelerations $\va_d$ such that each
+foot has the desired configuration $\mT_d\in\SE$ and velocity $\sv_d\in\se$.
+Specifically, for each foot, we use the following feedback rule:
+\begin{equation}
+	\va_{d,i} = k_p\log(\mT_i^{-1}\mT_{d,i}) + k_d ( \sv_{d,i} - \sv_i ) \, ,
+\end{equation}
+for $i\in\{r,l\}$ where $k_p$ and $k_d$ are proportional and
+derivative feedback gains, respectively. The
+$\log:\SE \rightarrow \se$ function computes the twist coordinates
+corresponding to a transformation matrix~\cite{MLS94}.
+The current configuration  $\mT$ and velocity $\sv$ of a foot
+can be computed from the forward kinematics operation
+assuming that the robot can either measure or estimate
+the joint angles and velocities as well as
+the configuration and velocity of the trunk, e.g., from an accelerometer
+and a gyroscope.
+
+
+%===================================================
+\subsection{Balance Control for Dynamic Walking}
+%===================================================
+
+We have assumed that balance control, as defined above, is an end goal for any task of interest here.
+This does not, however, imply that balance control (as defined above) must be maintained throughout the
+walking task.
+For example, with typical dynamic walking, the single support or ``stepping'' phase does not satisfy this constraint.
+With typical dynamic walking, the support leg pushes the CoM to the opposite side, but, particularly at the end of this phase,
+is not able to push the CoM to its side.
+
+[Need diagram here?]
+
+This is usually ok because the subsequent double support phase ``catches'' the system
+(the task specification should be flexible enough to not require full balance control throughout the task, only at the end).
+Thus, it is not uncommon for full balance control to be intermittent, and any controller should take this into account.
+Further, as discussed above, it is often desirable to sacrifice some posture goals in favor of balance control goals.
+Such sacrifice will typically be intermittent, in response to disturbances, allowing upright posture to be restored
+by the end of the task.
+The controller should be intelligent enough to take advantage of such flexibility in the task specification.
+
+This suggests that the controller framework should be equiped with some ``foresight'', allowing it to verify that end
+goals are achieved, even if they are not maintained throughout the task.
+A good approach for achieving such foresight is to use a \textit{Receding Horizon Model Predictive Controller} framework [cite].
+Such a controller essentially plans control actions over a limited (receding) time horizon.
+In this sense, it performs calculations similar to those of a motion planner.
+However, the purposes for these calculations are very different.
+Whereas the purpose of the calculations in a motion planner is to generate detailed joint trajectories to be executed exactly, 
+the purpose of the calculations in the receding horizon controller is to guarantee that the next control action does not
+lead the system into an undesired state at the end of the horizon.
+This allows a receding horizon controller to accept uncontrollable balance single support phases if the subsequent double support
+phase is balance controllable.
+It allows a receding horizon controller to know that a temporary sacrifice of postural goals (a temporary utilization of the 
+angular momentum reservoir) is possible in response to a disturbance.
+
+% See emails with Ambarish.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{Push Recovery and Stepping}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsubsection{Synchronization}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\subsection{Relation to biological control (ankle and hip strategies)}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion and Open Questions}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Controller Optimality}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Angular momentum reservoir limits}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Principled prioritization between linear and angular momenta}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Balance during tipping}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+\newpage
+
+-------------------- Outline recommended in template ---------------------
+
+
+\section{Synonyms}
+\begin{itemize}
+\item{Synonym 1}
+\item{Synonym 2}
+\item{...}
+\end{itemize}
+List only acronyms and those words with exactly the same meaning. All 
+words that appear as synonyms will be directly linked back to the home 
+entry, with no additional information given.
+
+\section{Related Concepts}
+\begin{itemize}
+\item{Related concept 1}
+\item{Related concept 2}
+\item{...}
+\end{itemize}
+
+This includes keywords. All related concepts will point to other entries in the encyclopedia. 
+
+
+\section{Definition}
+
+One or two sentences summarizing the concept of the entry.
+
+\section{Background}
+
+Describe the background of the entry.
+
+\section{Theory or Application, or Both}
+
+Describe the theory (application) of the entry. It can be either 
+Theory or Application, or it could be both of them.
+
+\section{Open problems (optional)}
+
+Describe the new trends, unsolved problems related to the entry.
+
+\section{Experimental Results (optional)}
+
+Experimental results that help the understandings of the entry. It 
+can be videos, codes, etc.
+
+%\nocite{*}
+%\bibliographystyle{plain}
+\bibliographystyle{unsrt}
+\bibliography{AngularMomentumChapter}
+%10-20 citations to important literature.
+%These references will be hyperlinked to the original source material. 
+
+
+
+
+
+
+
+
+\end{document}
+
+
+\begin{thebibliography}{99}\small
+
+\end{thebibliography}
+
+
+
+
 
 
 \paragraph{Double Support Case:}
@@ -1909,227 +2153,3 @@ of action of $\vf_i$ intersects the ankle. %We solve Eq. (\ref{eq:opt_m})
 %could be used as well.
 Note that both the least-squares problems have a small number of variables, so
 the optimization can be carried out quickly.
-
-
-
-%===================================================
-\subsubsection*{Admissible Momentum Rate Change}
-%===================================================
-After determining admissible foot GRF and foot CoP, the admissible
-momentum rate change $\vdh_a=[\vdk_a^T~\vdl_a^T]^T$ is also computed
-using (\ref{eq:vdk}) and (\ref{eq:vdl}) for single support, or (\ref{eq:vdk2}) and (\ref{eq:vdl2})
-for double support.
-
-%===================================================
-\subsubsection{Determination of Joint Accelerations and Torques}
-\label{sec:joint_acc}
-%===================================================
-
-After determining the admissible foot GRFs and foot CoPs, and admissible momentum
-rate changes, we compute joint accelerations and torques
-to realize them similarly to~\cite{Macchietto09}.
-
-%First, we resolve the desired joint accelerations  $\vddq$ for balance such that they satisfy (\ref{eq:const1}) and a variation of (\ref{eq:eom_base}).
-%To explain the latter let us first express the spatial centroidal momentum $\vh=[\vk^T~\vl^T]^T$ in terms of the generalized velocities:
-%\begin{equation}
-%	\vh = \mA(Q) \vdq   \, ,\label{eq:cmm1}
-%\end{equation}
-%where $\mA\in\real^{6\times (6+n)}$ is the centroidal momentum matrix~\cite{OG08} that linearly maps the generalized velocities to the spatial momentum. Differentiating (\ref{eq:cmm1}), we obtain
-%\begin{equation}
-%	\vdh = \mA \vddq + \mdA\vdq  \, .\label{eq:cmm}
-%\end{equation}
-
-%If we replace $\vdh$ with external forces  using Newton's law (refer to (\ref{eq:vdk}) and (\ref{eq:vdl})), then (\ref{eq:cmm}) expresses the aggregate motion of the dynamic system due to the external forces, which is exactly same as what (\ref{eq:eom_base}) represents. Note that the joint torques are not included in (\ref{eq:eom_base}). The only difference is the reference frame: (\ref{eq:cmm}) is expressed with respect to a frame at the CoM whereas (\ref{eq:eom_base}) is written with respect to the base frame. While either (\ref{eq:eom_base}) or (\ref{eq:cmm}) can be used, we choose to use (\ref{eq:cmm}) because our balance controller defines its objectives in terms of centroidal momenta.
-
-Specifically, we compute the output accelerations of the balance controller $\vddth$ such that they minimize the following objective function:
-\begin{equation}\begin{split}
-		\vddth_a = \underset{\vddth}{\operatorname{argmin}}~w_b|| \vdh_a - \mat{A}\vddq - \mdA\vdq  || + (1-w_b)|| \vddth^u_d - \vddth^u || \\
-		\text{s.t.~} \mJ\vddq + \mdJ\vdq = \va_d \quad \text{and} \quad \vddth_l \le \vddth \le \vddth_u  \, ,
-\end{split}
-\label{eq:ddq_a}
-\end{equation}
-where $\vdh_a$ is the admissible momentum rate change.
-We will call the output acceleration vector the admissible acceleration,
-and denote it by $\vddth_a$. Note that $\vddth_a$ contains all the joint 
-accelerations except those of the floating joints.
-Because there can be infinitely many solutions for $\vddth_a$
-that create $\vdh_a$, we have an additional optimality
-criteria in (\ref{eq:ddq_a}), which is to follow the desired joint acceleration of the upper body $\vddth^u_d$
-as closely as possible.
-One can set $\vddth^u_d$ to specify an upper-body task,
-or set $\vddth^u_d=\vzero$ to minimize the movement.
-The parameter $w_b (0 < w_b < 1)$ controls the relative
-importance between the balance objective (the first term)
-and the prescribed motion objective associated with the
-kinematic task (the second term).
-It is to be noted that $w_b$ should be close to 1
-in order to create admissible momentum rate, but it cannot be exactly 1
-because in this case (\ref{eq:ddq_a}) becomes indeterminate.
-$\va_d=[\va_{d,r}^T~\va_{d,l}^T]^T$ is the desired accelerations of the
-right and left feet.
-Section~\ref{sec:desired_feet} details how to determine $\va_d$.
- Equation (\ref{eq:ddq_a}) can be easily converted to a
-least-squares problem with linear equality and bound constraints,
-and many solvers (e.g.,~\cite{lourakis04LM}~) are available for this type of problem.
-
-We set $\vddth_l$ and $\vddth_u$, the lower and upper bound
-of the joint accelerations, somewhat heuristically
-such that the joint limit constraints are satisfied (e.g.,
-$\vddth_u$ decreases when a joint angle approaches its upper limit).
-
-Finally, we compute the feedforward torque input $\vtau_{ff}$ from $\vddth_a$
-and the admissible external forces by performing inverse dynamics.
-Since external forces are explicitly specified for the
-support feet by (\ref{eq:nnls}) and (\ref{eq:opt_m})
-and joint accelerations are set by (\ref{eq:ddq_a}),
-we have all the necessary information for inverse dynamics.
-Specifically, we use the hybrid system dynamics algorithms \cite{Featherstone87},
-which is useful for performing inverse dynamics for floating-base
-mechanisms.
-
-%(?? How does this comment relate to the fact that you are
-%not currently using the GRF values measured by the ankle force sensors? --> They don't seem to be related..I think they are separate issues.
-%Would anything change here if you do decide to use the force/torque sensor data?)
-
-Overall torque input is determined by adding feedback terms:
-\begin{align}
-	\vtau_s &= \vtau_{ff} + \vtau_{fb} \label{eq:tau_s}\\
-	\vtau_{fb} &= \mGamma_p ( \vth^\ast - \vth ) + \mGamma_d ( \vdth^\ast - \vdth ) \, ,
-\end{align}
-where $\mGamma_p=\diag(\gamma_{p,i})$ and $\mGamma_d=\diag(\gamma_{d,i})$ are proportional and derivative gains, respectively.
-Position and velocity commands $\vth^\ast$, $\vdth^\ast$ are determined from
-the time integration of $\vddth_a$.
-
-
-%===================================================
-\subsubsection{Desired Motion of the Feet}
-\label{sec:desired_feet}
-%===================================================
-We set the desired foot accelerations $\va_d$ such that each
-foot has the desired configuration $\mT_d\in\SE$ and velocity $\sv_d\in\se$.
-Specifically, for each foot, we use the following feedback rule:
-\begin{equation}
-	\va_{d,i} = k_p\log(\mT_i^{-1}\mT_{d,i}) + k_d ( \sv_{d,i} - \sv_i ) \, ,
-\end{equation}
-for $i\in\{r,l\}$ where $k_p$ and $k_d$ are proportional and
-derivative feedback gains, respectively. The
-$\log:\SE \rightarrow \se$ function computes the twist coordinates
-corresponding to a transformation matrix~\cite{MLS94}.
-The current configuration  $\mT$ and velocity $\sv$ of a foot
-can be computed from the forward kinematics operation
-assuming that the robot can either measure or estimate
-the joint angles and velocities as well as
-the configuration and velocity of the trunk, e.g., from an accelerometer
-and a gyroscope.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Push Recovery and Stepping}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Synchronization}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Relation to biological control (ankle and hip strategies)}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Controller Optimality}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Angular momentum reservoir limits}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Discussion and Open Questions}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Principled prioritization between linear and angular momenta}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Balance during tipping}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
--------------------- Outline recommended in template ---------------------
-
-
-\section{Synonyms}
-\begin{itemize}
-\item{Synonym 1}
-\item{Synonym 2}
-\item{...}
-\end{itemize}
-List only acronyms and those words with exactly the same meaning. All 
-words that appear as synonyms will be directly linked back to the home 
-entry, with no additional information given.
-
-\section{Related Concepts}
-\begin{itemize}
-\item{Related concept 1}
-\item{Related concept 2}
-\item{...}
-\end{itemize}
-
-This includes keywords. All related concepts will point to other entries in the encyclopedia. 
-
-
-\section{Definition}
-
-One or two sentences summarizing the concept of the entry.
-
-\section{Background}
-
-Describe the background of the entry.
-
-\section{Theory or Application, or Both}
-
-Describe the theory (application) of the entry. It can be either 
-Theory or Application, or it could be both of them.
-
-\section{Open problems (optional)}
-
-Describe the new trends, unsolved problems related to the entry.
-
-\section{Experimental Results (optional)}
-
-Experimental results that help the understandings of the entry. It 
-can be videos, codes, etc.
-
-%\nocite{*}
-%\bibliographystyle{plain}
-\bibliographystyle{unsrt}
-\bibliography{AngularMomentumChapter}
-%10-20 citations to important literature.
-%These references will be hyperlinked to the original source material. 
-
-
-
-
-
-
-
-
-\end{document}
-
-
-\begin{thebibliography}{99}\small
-
-\end{thebibliography}
-
