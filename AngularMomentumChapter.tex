@@ -461,6 +461,39 @@
 
 %\subsection{Humanoid Robot Tasks and Their Specification}
 
+
+% [To Do Andreas
+
+% Add 2004 IROS reference, before ref. 29
+
+% Need a better transition from Intro to Momentum section.
+% In general, we need better transitions, and a better overview.
+
+% Add journal paper reference?  Does this get too far into task stuff?
+% Consult with Ambarish and Sung-Hee.
+
+% Table 1 is useful.  Refer to it in my discussion?  In particular, Pd is silly.
+% A key message of this paper should be that 1d is the right way to think about this problem.
+
+% In section 2.1, I use the term ZMP, but this has not been introduced at this point.
+% Should I just use P, to be consistent with the previous terminology?  Should we introduce
+% ZMP first?  Section 2.1 should probably refer back to Table 1.  The ZMP control approach
+% corresponds to Table 1a, the correct approach, 1d.
+
+% Take out note in section 4.1.
+
+% Is the notation in eqs. 20, 21 sufficiently consistent with the preceding analysis on how
+% to compute momentum?  Fig. 6, in the preceding analysis, uses ``G'' to refer to CoM, whereas
+% in section 4.1, I use ``CoM''.  I can change this to ``G'' to be consistent;  please advise.
+
+% Do we need a separate definition of ZMP, distinct from ``P'' in the previous analysis?
+% I can change the notation to ``P'', please advise.
+
+% Use Centroidal Moment Pivot, not Point.
+
+% ]
+
+
 Humanoid bipedal morphologies have unique characteristics that provide significant advantages (and some disadvantages) over quadruped or wheeled robots. 
 Key functional features of the humanoid morphology include a variable base of support and a high center of mass.
 Because bipeds have only two legs, their support base is naturally constrained, allowing them to operate in environments where support base space is limited; 
@@ -1359,10 +1392,340 @@ Balance control is then reduced to a problem of adjusting the base of support, a
 that generate angular momentum, so that the CMP can be moved, temporarily, outside the base of support, in order to exert additional compensating force on the CoM.
 
 
+\subsubsection{Biped Model}
+
+Consider the three-dimensional humanoid biped model, shown in Fig. \ref{fig:BipedModel}.
+The model has 7 segments:  two feet, two lower leg segments, two upper leg segments, and a body segment that lumps the torso, head, and arms.  
+The leg and body segments are modeled as cylinders, whereas the feet are modeled as rectangular blocks.  
+Segment dimensions and masses are given in Tables \ref{tab:ModelSegmentMasses} and \ref{tab:ModelSegmentDimensions}.  
+Twelve degrees of freedom correspond to joints (6 in each leg), and 6 degrees of freedom correspond to upper body position and orientation.  
+Each leg is modeled with a ball-and socket hip joint (3 degrees of freedom), a pin knee joint (one degree of freedom), and a saddle-type ankle joint 
+(two degrees of freedom).  
+Note that although the humanoid model presented here does not include independently moving arms, the model, and the DVMC control architecture 
+can be easily extended to include them.    
+
+\begin{figure}[b]
+% \sidecaption
+\includegraphics[height=2.2in]{BipedModel}
+\caption{Virtual linear spring-damper elements, attached to reaction points, allow the mechanism to be controlled as if it were a puppet.  
+The coordinate frame is as follows: x is the anterior-posterior axis, y is the medio-lateral axis, and z is the vertical axis.
+(\copyright IEEE, 2009, reprinted with permission)}
+\label{fig:BipedModel}       
+\end{figure}
+
+The outputs to be controlled are listed in Table \ref{tab:ControlOutputs}.  
+These outputs are values relevant to balance control and locomotion, such as CM position, upper body orientation, and stepping foot position.  
+Thus, the purpose of the DVMC is to move the joints so that the desired motion for the outputs is achieved.  
+
+\begin{table}
+\caption{Model Segment Masses}
+\label{tab:ModelSegmentMasses}   
+
+\begin{tabular}{p{3cm}p{3cm}}
+\hline\noalign{\smallskip}
+Model Segment & Mass (kg) \\
+%\noalign{\smallskip}\svhline
+\noalign{\smallskip} \hline
+Foot & 1.56\\
+Lower Leg & 4.48\\
+Upper Leg & 10.73\\
+Upper Body & 70.65\\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+% $^a$ Table foot note (with superscript)
+\end{table}
 
 
 
+\begin{table}
+\caption{Model Segment Dimensions}
+\label{tab:ModelSegmentDimensions}  
 
+\begin{tabular}{p{3cm}p{3cm}p{3cm}}
+\hline\noalign{\smallskip}
+Model Segment & Length (m) & Radius (m) \\
+\noalign{\smallskip} \hline
+Upper Body & 0.64 & 0.18\\
+Upper Leg & 0.46 & 0.08\\
+Lower Leg & 0.48 & 0.05\\
+Hip Spacing & 0.25\\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+% $^a$ Table foot note (with superscript)
+\end{table}
+
+
+
+\begin{table}
+\caption{Outputs to be Controlled}
+\label{tab:ControlOutputs}   
+
+\begin{tabular}{p{3cm}p{8.5cm}}
+\hline\noalign{\smallskip}
+Index & Output \\
+\noalign{\smallskip} \hline
+1 & Posterior-anterior CM position\\
+2 & Medio-lateral CM position\\
+3 & Vertical CM position\\
+4 & Upper body roll angle\\
+5 & Upper body pitch angle\\
+6 & Upper body yaw angle\\
+7 & Posterior-anterior swing foot position\\
+8 & Medio-lateral swing foot position\\
+9 & Vertical swing foot position\\
+10 & Swing foot roll angle\\
+11 & Swing foot pitch angle\\
+12 & Swing foot yaw angle\\
+\noalign{\smallskip}\hline\noalign{\smallskip}
+\end{tabular}
+$^a$ For single-support case, in the global coordinate frame.  For double-support, outputs 7-12 (the ones associated with the swing foot) are omitted.
+\end{table}
+
+
+\subsubsection{Controller Architecture}
+
+Desired motion behavior for the outputs is specified in a simple, straightforward way, using a linear proportional-differential (PD) law:
+
+\begin{equation}
+\ddot{\mathbf{y}} = \mathbf{k}_s \left( \mathbf{y}_s - \mathbf{y}\right) + \mathbf{k}_d \left( \dot{\mathbf{y}}_s - \dot{\mathbf{y}}\right)
+\label{eq:DesiredMotion}
+\end{equation}
+
+\noindent where $\mathbf{y}$ is the vector of outputs to be controlled, $\mathbf{y}_s$ and $\dot{\mathbf{y}}_s$ are position and velocity
+setpoint vectors, and $\mathbf{k}_s$ and $\mathbf{k}_d$ are spring and damping gain vectors.
+Such a control law can be represented as a set of virtual spring-damper elements attached to the output points being controlled, as shown in 
+Figure \ref{fig:BipedModel}, so that the controlled outputs move as if they were point masses attached to these spring-damper systems.
+
+The difficulty with this is that the robot is not a linear system; the accelerations of the controlled outputs are nonlinear functions of the 
+joint torque actuation inputs.  
+The DVMC solves this problem by providing an abstraction of the plant, shown in Figure \ref{fig:LinearizationSISO}, which makes it appear linear, and
+therefore, allows it to follow control laws in the form of Eq. \ref{eq:DesiredMotion}. 
+
+\begin{figure}[b]
+% \sidecaption
+\includegraphics[height=2.2in]{LinearizationSISO}
+\caption{Linear virtual element abstraction consisting of a set of SISO systems with associated linear control laws.}
+\label{fig:LinearizationSISO}       
+\end{figure}
+
+This use of virtual elements is similar, in concept, to the one used in a virtual model controller \cite{pratt1997virtual}.  
+However, unlike \cite{pratt1997virtual}, the DVMC accounts for plant dynamics, resulting in a linear system where controlled points move as if they were linear second order systems.  
+Furthermore, through the use of a goal prioritization technique, the DVMC is able to generate moments about the CM in order to generate beneficial forces on the CM.
+
+The DVMC uses a model-based input-output linearization algorithm \cite{slotine1991applied} to linearize and decouple the plant.  
+The input-output linearization approach is augmented with a slack variable relaxation technique to accommodate actuation constraints and prioritize goals.  
+This feature is important because it is not always possible to achieve all control goals simultaneously.  
+Actuation constraints, such as the requirement that the ZMP must remain well inside the support base in the case where foot roll is undesireable, 
+may cause the overall system to become over-constrained, in which case some goals must be deferred.  
+To address this problem, the controller incorporates a goal prioritization algorithm that automatically sacrifices lower-priority goals when 
+the system becomes over-constrained in this way.  
+For example, the system may temporarily sacrifice goals of maintaining upright posture in order to achieve CM state goals.  
+We now describe the linearization and goal prioritization components of the controller in more detail.
+
+
+\subsubsection{Linear Virtual Element Abstraction}
+
+A geometric transform, $\mathbf{h}$, is used to convert from the joint state to the workspace (output) state representation, according to
+
+\begin{equation}
+\mathbf{y} = \mathbf{h} \left( \mathbf{q} \right)
+\label{eq:Kinematics}
+\end{equation}
+
+\noindent where $\mathbf{q}$ is the joint position vector, and $\mathbf{y}$ is the output vector.
+Thus, $\mathbf{h}$ is the kinematic transform.
+The controller uses a feedback linearizing transformation to convert desired workspace variable accelerations, $\ddot{\mathbf{y}}$, 
+into corresponding joint torques.  
+Application of these torques results in a new joint state, and associated workspace state.  
+Use of the linearizing transformation makes the nonlinear plant appear to be a set of decoupled SISO linear 2nd-order systems, 
+as shown in Figure \ref{fig:LinearizationSISO}.  
+Each SISO system can then be controlled by a proportional-differential (PD) law, as discussed previously, resulting in a \textit{linear virtual element abstraction}.  
+
+The linearization is accomplished using a two-stage process, as shown in Figure \ref{fig:TwoStageLinearization}.  
+Given a desired output acceleration vector, $\ddot{\mathbf{y}}_{des}$, which is computed by the PD law, we first compute the corresponding joint acceleration vector,
+$\ddot{\mathbf{q}}_{des}$, using a geometric transformation.  
+Then, we compute the joint torque vector, $\tau$, that achieves $\ddot{\mathbf{q}}_{des}$, using an inverse dynamics transformation \cite{craig2005introduction}.  
+
+The inverse dynamics computation is of the form
+
+\begin{equation}
+\mathbf{H} \left( \mathbf{q} \right) \ddot{\mathbf{q}} + \mathbf{C} \left( \mathbf{q}, \dot{\mathbf{q}} \right) + \mathbf{g} \left( \mathbf{q} \right) = \mathbf{\tau}
+\label{eq:InverseDynamics}
+\end{equation}
+
+\noindent where $\mathbf{H} \left( \mathbf{q} \right)$ is a matrix of inertial terms, $\mathbf{C} \left( \mathbf{q}, \dot{\mathbf{q}} \right)$ is a
+matrix of velocity-related terms, and $\mathbf{g} \left( \mathbf{q} \right)$ is a vector of gravitational terms.  
+Hence, for a particular joint state $\left[ \mathbf{q}^T, \dot{\mathbf{q}}^T  \right]$, Eq. \ref{eq:InverseDynamics} represents a linear relation between
+$\mathbf{\tau}$ and $\ddot{\mathbf{q}}$.
+Note also that because $\mathbf{\tau}$ and $\ddot{\mathbf{q}}$ are both 12-element vectors (corresponding to the 12 actuators), 
+$\mathbf{H} \left( \mathbf{q} \right)$ is a 12x12 square matrix, so Eq. \ref{eq:InverseDynamics} is fully constrained.
+
+\begin{figure}[b]
+% \sidecaption
+\includegraphics[height=2.2in]{TwoStageLinearization}
+\caption{Two-stage Linearization}
+\label{fig:TwoStageLinearization}       
+\end{figure}
+
+In order to obtain a relation between $\ddot{\mathbf{y}}_{des}$ and $\ddot{\mathbf{q}}_{des}$, 
+we differentiate Eq. \ref{eq:Kinematics} twice to obtain
+
+\begin{eqnarray}
+\dot{\mathbf{y}} = \frac{\partial \mathbf{h}}{\partial \mathbf{q}} \dot{\mathbf{q}} = \mathbf{J} \dot{\mathbf{q}}\\
+\ddot{\mathbf{y}} = \mathbf{J} \ddot{\mathbf{q}} + \dot{\mathbf{J}} \dot{\mathbf{q}} = \mathbf{J} \ddot{\mathbf{q}} + \Psi
+\label{eq:DifferentiatedKinematics}
+\end{eqnarray}
+
+\noindent where $\mathbf{J}$ is the Jacobian matrix.
+The matrix $\mathbf{J}$ and the vector $\Psi$ are functions of joint state.
+Therefore, for a particular joint state $\left[ \mathbf{q}^T, \dot{\mathbf{q}}^T  \right]$, Eq. \ref{eq:DifferentiatedKinematics} represents 
+a linear relation between $\ddot{\mathbf{q}}$ and $\ddot{\mathbf{y}}$.
+Note also that because $\mathbf{q}$ and $\mathbf{y}$ are both 12-element vectors, Eq. \ref{eq:DifferentiatedKinematics} represents a fully constrained system.
+
+To achieve the linearization shown in Figure \ref{fig:TwoStageLinearization}, we combine Eqs. \ref{eq:InverseDynamics} and \ref{eq:DifferentiatedKinematics}:
+
+\begin{equation}
+\begin{bmatrix}
+\mathbf{I}_{12 \times 12} & \mathbf{0}_{12 \times 12} & \mathbf{0}_{12 \times 12} \\
+\mathbf{I}_{12 \times 12} & - \mathbf{J} & \mathbf{0}_{12 \times 12} \\
+\mathbf{0}_{12 \times 12} & \mathbf{H} & - \mathbf{I}_{12 \times 12}
+\end{bmatrix}
+\begin{bmatrix}
+\ddot{\mathbf{y}} \\
+\ddot{\mathbf{q}} \\
+\mathbf{\tau} 
+\end{bmatrix} = 
+\begin{bmatrix}
+\ddot{\mathbf{y}}_{des} \\
+\Psi \\
+- \mathbf{C} 
+\end{bmatrix}
+\label{eq:FBLin}
+\end{equation}
+
+Note that this is a fully constrained, linear system.
+
+
+
+\subsubsection{Multivariable Optimal Controller}
+
+The linearization of the square system represented by Eq. \ref{eq:FBLin} is subverted if inequality constraints are introduced, and these constraints become active;  
+the system represented by Eq. \ref{eq:FBLin} becomes over-constrained in this case.  
+Inequality constraints are used to represent actuation limits.  
+An important constraint of this type is the requirement to keep the stance foot flat on the ground during single support;  
+while balancing on one leg it is undesirable for the stance foot to roll, particularly on its lateral edge.  
+This particular constraint is accomplished by requiring the ZMP to be inside the edge of the support envelope.  
+Note that this constraint is distinct from the physical constraint that the ZMP not be outside the support base.  
+If the ZMP is on the edge of the support envelope, the foot will begin to roll \cite{popovic2005ground}.  
+Hence, in order to avoid foot roll, we employ linear inequality constraints to keep the ZMP inside the edge of the support envelope.
+
+For the humanoid model, the ZMP is given by expanding Eq. \ref{eq:ZMP}, or
+
+\begin{eqnarray}
+x_{ZMP} = \frac{\sum_{i=2}^7 m_i r_{xi} \left( \ddot{r}_{zi} + g\right) - \sum_{i=2}^7 m_i r_{zi} \ddot{r}_{xi} - \sum_{i=2}^7 \tau_{yi}}
+{\sum_{i=2}^7 m_i \left( \ddot{r}_{zi} + g\right)} \\
+y_{ZMP} = \frac{\sum_{i=2}^7 m_i r_{yi} \left( \ddot{r}_{zi} + g\right) - \sum_{i=2}^7 m_i r_{zi} \ddot{r}_{yi} + \sum_{i=2}^7 \tau_{xi}}
+{\sum_{i=2}^7 m_i \left( \ddot{r}_{zi} + g\right)} \\
+\mathbf{\tau}_{xi} = \mathbf{I}_{Gi} \dot{\mathbf{\omega}_{xi}} \\
+\mathbf{\tau}_{yi} = \mathbf{I}_{Gi} \dot{\mathbf{\omega}_{yi}}
+\label{eq:ZMPexpanded}
+\end{eqnarray}
+
+\noindent where $i$ is the segment index, $r_{xi}$, $r_{yi}$, and $r_{zi}$ denote the CM position of segment $i$, $\mathbf{I}_{Gi}$ is the inertia matrix of 
+segment $i$, and $\mathbf{\omega}_{xi}$ and $\mathbf{\omega}_{yi}$ are the angular velocities of segment $i$ about the x and y axes, respectively.
+The moments, $\mathbf{\tau}_{xi}$ and $\mathbf{\tau}_{yi}$, are about the segment $i$ CM in the x and y axes, respectively.
+
+Eq. \ref{eq:ZMPexpanded} is transformed into a set of linear inequality constraints by replacing $x_{ZMP}$ and $y_{ZMP}$ with min and max terms, reflecting 
+the bounds, so that these become constants:
+
+\begin{equation}
+\mathbf{H}_r \ddot{\mathbf{y}}_r \leq \mathbf{K}_r
+\label{eq:LinearInequality}
+\end{equation}
+
+\noindent where
+
+\begin{equation}
+\mathbf{H}_r = 
+\begin{bmatrix}
+- \mathbf{m}^T \bullet \mathbf{r}_z^T & \mathbf{0}_{1 \times 6} & \left( -\mathbf{x}_{max} + \mathbf{m}^T \bullet \mathbf{r}_x^T \right) & \mathbf{0}_{1 \times 6} & - \mathbf{I}_y \\
+\mathbf{m}^T \bullet \mathbf{r}_z^T & \mathbf{0}_{1 \times 6} & \left( \mathbf{x}_{min} - \mathbf{m}^T \bullet \mathbf{r}_x^T \right) & \mathbf{0}_{1 \times 6} & \mathbf{I}_y \\
+\mathbf{0}_{1 \times 6} & - \mathbf{m}^T \bullet \mathbf{r}_z^T & \left( -\mathbf{y}_{max} + \mathbf{m}^T \bullet \mathbf{r}_y^T \right) & \mathbf{I}_x & \mathbf{0}_{1 \times 6} \\
+\mathbf{0}_{1 \times 6} & \mathbf{m}^T \bullet \mathbf{r}_z^T & \left( \mathbf{y}_{min} - \mathbf{m}^T \bullet \mathbf{r}_y^T \right) & - \mathbf{I}_x & \mathbf{0}_{1 \times 6}
+\end{bmatrix}
+\label{eq:Hr_def}
+\end{equation}
+
+\begin{equation}
+\ddot{\mathbf{y}}_r = 
+\begin{bmatrix}
+\ddot{\mathbf{r}}_x^T & \ddot{\mathbf{r}}_y^T & \ddot{\mathbf{r}}_z^T & \dot{\mathbf{\omega}}_x^T & \dot{\mathbf{\omega}}_y^T
+\end{bmatrix}^T
+\label{eq:yr_def}
+\end{equation}
+
+\begin{equation}
+\mathbf{K}_r = 
+\begin{bmatrix}
+g \left( m_{tot} x_{zmpmax} - \mathbf{m}^T \bullet \mathbf{r}_x^T \right)^T \\
+-g \left( m_{tot} x_{zmpmin} - \mathbf{m}^T \bullet \mathbf{r}_x^T \right)^T \\
+g \left( m_{tot} y_{zmpmax} - \mathbf{m}^T \bullet \mathbf{r}_y^T \right)^T \\
+-g \left( m_{tot} y_{zmpmin} - \mathbf{m}^T \bullet \mathbf{r}_y^T \right)^T \\
+\end{bmatrix}
+\label{eq:Kr_def}
+\end{equation}
+
+\begin{eqnarray}
+\mathbf{x}_{max} = x_{zmpmax} \mathbf{m}^T\\
+\mathbf{x}_{min} = x_{zmpmin} \mathbf{m}^T\\
+\mathbf{y}_{max} = y_{zmpmax} \mathbf{m}^T\\
+\mathbf{y}_{min} = y_{zmpmin} \mathbf{m}^T
+\label{eq:SupportLimits}
+\end{eqnarray}
+
+\noindent where $\mathbf{m}$ is a 6-element vector of masses for segments 2 – 7, $\mathbf{r}_x$, $\mathbf{r}_y$, and $\mathbf{r}_z$ 
+are 6-element vectors of the segments’ CM x, y, and z positions, $\mathbf{I}_x$ and $\mathbf{I}_y$ are 6-element vectors of the segments’ inertias 
+about the x and y axes, and $x_{zmpmin}$, $x_{zmpmax}$, $y_{zmpmin}$, and $y_{zmpmax}$ are the ZMP limits.  The operator $\bullet$ represents element-wise multiplication.
+
+Now, $\mathbf{r}_x$, $\mathbf{r}_y$, $\mathbf{r}_z$, $\mathbf{I}_x$ and $\mathbf{I}_y$ are kinematic functions of $\mathbf{q}$, and $\mathbf{m}$ is a constant.
+Therefore, Eq. \ref{eq:LinearInequality} is linear with respect to the current joint state.  
+Furthermore, $\ddot{\mathbf{y}}_r$ is related to the joint acceleration vector through a linear function similar to Eq. \ref{eq:FBLin}:
+
+\begin{equation}
+\ddot{\mathbf{y}}_r = \mathbf{J}_r \ddot{\mathbf{q}} + \Psi_r
+\label{eq:yr_def2}
+\end{equation}
+
+\noindent Therefore, if we combine the inequality constraints of Eq. \ref{eq:yr_def2} with \ref{eq:LinearInequality}, we have an overall system that is either 
+fully constrained or over constrained (because $\ddot{\mathbf{y}}_r$ is fully dependent on $\ddot{\mathbf{q}}$, it does not add any flexibility).  
+If none of the constraints in Eq. \ref{eq:LinearInequality} are active, the system is fully constrained.  
+However, if one of these constraints is active, the system becomes over constrained, and there is no feasible solution.  
+Consequently, if the controller does not take the constraints in Eq. \ref{eq:LinearInequality} into consideration, it could generate values for $\ddot{\mathbf{y}}_{des}$
+that are infeasible.
+
+One way to avoid this type of infeasibility is to use “slack” variables that provide flexibility to the overall system.  
+Thus, the controller output, $\ddot{\mathbf{y}}_{contout}$, is given by
+
+\begin{equation}
+\ddot{\mathbf{y}}_{des} = \ddot{\mathbf{y}}_{contout} + \ddot{\mathbf{y}}_{slack}
+\label{eq:y_contout}
+\end{equation}
+
+\noindent where $\ddot{\mathbf{y}}_{slack}$ is the vector of slack variables.  
+The goal of the overall control system is then to minimize $\ddot{\mathbf{y}}_{slack}$, taking into account the relative importance of each element.  
+
+This minimization is accomplished by formulating the control problem as a quadratic program (QP), and then using a QP optimizer to solve it.  
+The relative importance of the slack variables is expressed in the cost function for the QP.
+This causes the optimizer to prioritize goals by first minimizing the slack variables for the most important outputs, and therefore, setting
+$\ddot{\mathbf{y}}_{contout}$ to be as close as possible to $\ddot{\mathbf{y}}_{des}$ for these outputs.  
+For example, slack variables associated with the CM position output are given higher cost than those associated with trunk and swing leg orientation.  
+The slack variable costs were determined empirically.  
+Their precise value is not crucial;  as long as the slack costs for CM position are higher than the slack costs for the other outputs, desired behavior is achieved.
+
+The QP formulation is under-constrained, due to the use of the slacks.  
+The QP optimizer explores the null space of the formulation, choosing the solution that minimizes the cost function.  
+This cost function is of the form $\mathbf{w} \cdot \ddot{\mathbf{y}}_{slack}$ where $\mathbf{w}$ 
+is a vector of weights reflecting the importance of minimizing the associated slack variable \cite{hofmann2004sliding}. 
 
 
 
