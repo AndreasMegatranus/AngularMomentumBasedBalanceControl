@@ -554,14 +554,20 @@ such as angular movement of the body and swing leg must be used, as shown in Fig
 \label{fig:LatPushIntro1}       
 \end{figure}
 
-In these examples, and others like them, the key challenge is to move the humanoid,
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Locomotion task execution for humanoid robots}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In the previously described examples, and others like them, the key challenge is to move the humanoid,
 a complex, dynamic system, to an acceptable pose at an acceptable time, despite actuation limits, and despite disturbances.
 The system should be able to recover from disturbances such as slips, trips, pushes, and ground contact instability due to soft terrain, 
 even when foot placement is constrained.  
 In particular, it should utilize flexibility in the task specification to achieve its goals.
 For example, it may temporarily sacrifice a goal of maintaining an upright pose in order to achieve balance goals.
 
-We seek to develop a robust plan execution system capable of guiding a robotic biped through a series of walking task goals, in the presence of disturbances.  
+To achieve this, we seek to develop a robust plan execution system capable of guiding a robotic biped through a series of walking task goals, in the presence of disturbances.  
 The system must understand commands at the task level;  it must take as input a high-level specification of where it should be, and by what time, and then 
 automatically figure out the details of how to move to accomplish these goals.  
 It should also be able to automatically detect whether a task that it is given can be accomplished in the allotted time, and should warn the human operator 
@@ -570,6 +576,102 @@ If a disturbance occurs during execution of the task, the system should attempt 
 complete the task on time.  
 If this is not possible, the system should alert the user, or a higher-level control authority, and should prepare itself for failure.
 For example, if a fall is inevitable, it should put out its hands to break the fall.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{The role of momentum control in humanoid task execution}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A comprehensive discussion of humanoid task execution is beyond the scope of this chapter.
+The reader is referred to previous work on this topic, particularly on task executives that utilize
+spatial and temporal flexibility in the task specification \cite{hofmann2015temporally, hofmann2006exploiting}.
+In this chapter, we will focus on momentum control, a foundational capability that supports
+humanoid task execution.
+
+Momentum control involves control of two major components:  linear, and angular.  
+For both components, there are typically goals to control system momentum, as well as the momentum of 
+individual links in the mechanism.
+For example, for the linear component, there will typically be a goal to control the Center of Mass (CoM)
+so that balance is maintained, and there may also be goals to control momentum of the feet to achieve
+particular foot placements.
+For the angular component, there will typically be a goal to minimize overall angular momentum
+(and particularly, changes in overall angular momentum), in order to minimize energy losses \cite{PHH04}.
+There will also typically be goals to maintain an upright posture of the torso and head.
+As we will show, there are also interesting cases where rapid changes to overall angular momentum
+are desirable.
+These cases occur when linear momentum control becomes difficult (possibly due to a disturbance,
+or limited foot placement options).  In such cases, the goal of minimal overall angular momentum
+can be temporarily sacrificed so that the linear momentum control goal is achieved.
+
+
+
+\subsubsection{Momentum Control Problem Definition and Challenges}
+
+Before describing how momentum control works in detail, we first provide a definition
+of what we mean by momentum control, within the context of task execution.
+
+To begin, we use the term ``control'' here in a very general sense;
+our use of this term does not necessarily imply stabililty or controllability as these terms are 
+traditionally used in control theory.
+Instead, we adopt a more practical definition, relevant to the goal of executing a task or set of tasks.
+This is motivated by the fact that it is often sufficient to ``influence'' a quantity of interest, such as the 
+forward momentum of the Center of Mass, even if strict linear controllability is not possible.
+For example, it may be impossible to bring a fast running biped robot to a full stop in one single-support step,
+but it may be possible to use a sequence of such steps to decelerate the robot until it stops.
+This may or may not be acceptable, depending on the task state and temporal requirements.
+For example, if the robot requires three steps to stop, but is one step from the edge of a cliff, the robot
+does not have sufficient momentum controllability to avoid falling off the cliff.
+
+Thus, the problem we address is implementation of a \textit{momentum controller} that provides 
+\textit{sufficient momentum controllability}.
+We define \textit{momentum controllability} to be sufficient if the momentum can be influenced 
+enough to satisfy task requirements.
+
+% What does it mean to control momentum in support of a task?
+% Do we need more definition here?  This would require getting into task specifications, plan representations, etc.
+
+This problem is challenging because, for a biped, momentum is influenced by interaction with the external environment,
+through contact of the feet with the ground.
+The amount of force that can be exerted this way is limited, due both to limitations of the biped's actuators, 
+as well as the inherent limitations of exerting force on a relatively high CoM with a relatively narrow foot print.
+Despite the serious actuation limits, bipeds are capable of achieving remarkable tasks like walking, running, and
+jumping on restricted terrain, if they use an appropriate momentum controller.
+
+Note that our definition of sufficient momentum controllability does not, necessarily, require stability in the 
+traditional sense;
+not all tasks for humanoid forms necessarily require balance as an end goal. 
+For example, a football player trying to score a touchdown, or a baseball player trying to catch a fly ball,
+does not care if he is upright at the end, as long as the goal is achieved.
+
+This is a more useful definition than traditional concepts of balance control.
+Such traditional concepts define successful balance control by the ability to 
+accelerate the CoM sufficiently in any direction in the horizontal plane, so that the robot does not fall.
+A fall is defined by contact of a non-foot link of the robot with the ground.
+Such a balance control definition is adequate if the task goal is simply to stand in one place
+(in double support or single support), and reject external balance disturbances.
+Such a balance control definition also covers the concept of changing foot placement, by stepping,
+to enhance momentum controllability.
+Thus, the biped could, if pushed severely, take one or more steps to recover.
+In fact, under this definition, in the absence of other task goals, it is ok for the CoM to move in random 
+directions, as long as the stepping action of the feet provides a sufficient base of support to
+beneficially accelerate the CoM so that the biped does not fall.
+Note also that this traditional balance control definition is an infinite time concept, similar to the concept of 
+stability for non-linear systems.
+
+We believe that our definition is more practically useful.
+We sidestep the difficult issue of infinite time stability and focus instead on the present and near future
+goals, as expressed by state and temporal constraints in the task specification \cite{hofmann2015temporally}.
+This often means balance control, as in the traditional definition, at least for the duration of the task,
+but with additional constraints
+for moving the CoM to an acceptable state, within an acceptable time, and with possible restrictions
+on where the feet can be placed.
+
+% Modify introductory paragraph in Section 4.1 to refer to this problem definition.
+
+
+[Need overview paragraph, after momentum control section.]
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1216,6 +1318,7 @@ This naturally leads us to the need for a precise definition of balance control.
 Consider a horizontal plane that intersects the CoM, and that is perpendicular to the gravity vector.
 We define balance control as the ability to accelerate the CoM in any direction in this 
 horizontal plane.
+[This isn't complete enough.  See better problem definition in the introduction.]
 
 % Make this a formal definition?  Show diagram of plane, or is this obvious?
 
