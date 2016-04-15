@@ -670,9 +670,6 @@ on where the feet can be placed.
 % Modify introductory paragraph in Section 4.1 to refer to this problem definition.
 
 
-[Need overview paragraph, after momentum control section.]
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Momentum control}
@@ -762,9 +759,18 @@ without controlling both momenta.%Due to this fact, attempts to control CoP by c
 %only CoM trajectory~\cite{Sugihara02} is fundamentally incomplete.
 
 
+
+The next section describes related work, including a popular bipedal walking technique called ZMP-based control.
+Section \ref{sec:ComputingMomentum} provides analysis and algorithms for computing the momentum of a humanoid robot.
+Section \ref{sec:approaches} describes two complementary momentum controllers.
+Section \ref{sec:scenarios} presents results of applying these controllers in a variety of scenarios.
+We conclude in Section \ref{sec:Discussion} with a discussion and summary, and ideas for future work.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Related Work}
+\label{sec:RelatedWork}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -940,6 +946,7 @@ quantities to be controlled (CoM state), results in an unstable system.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Computing Momentum of a Humanoid Robot}
+\label{sec:ComputingMomentum}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -1303,8 +1310,42 @@ Finally, since $\Bf=\vdh_G$ (Newton's equations of motion) where $\Bf$ is the ne
 
 
 
+This section describes two approaches to momentum-based balance control.
+Although they emphasize different aspects, they are complementary in that they both control momentum of the humanoid.
+
+The first, described in Subsection \ref{sec:CentroidalMomentPointControl}, uses a feedback linearization technique 
+to make the complex nonlinear biped appear to be a set of loosely coupled linear systems.
+Then, PID control laws can be applied to quantities of interest, such as the Center of Mass (CoM), or
+\textit{reaction points} of interest in the kinematic chain, such as ones on the torso, head, feet, or hands.
+Thus, balance task goals can be specified in terms of desired position and velocity of the CoM, which is
+directly related to system linear momentum, and goals for reaction point movement (linear and angular).
+By default, system angular momentum is minimized.
+With this approach, it is easy to specify tasks like balancing in single or double support modes, 
+and also dynamic walking tasks, which alternate between single
+and double support modes.
+
+% Motion planning, MPC formulation, beyond the scope of this chapter.
+% Actually, don't even mention MPC.  It really gets into motion planning.
+% Keep it simple.
+
+The second controller, described in Subsection \ref{sec:framework}, accepts a direct input of the desired
+rate of change of linear and angular momentum, and desired movement of torso and feet, and moves the 
+humanoid so that these desired values are achieved.  It can interface directly to a higher-level
+motion planner that generates trajectories for desired momentum.
+
+
 
 \subsection{Centroidal-Moment Point-Based Balance Control }
+\label{sec:CentroidalMomentPointControl}
+
+
+Revise this subsection to incorporate are more detailed problem statement.  Then give overview of 
+subsequent sections.  Take out stuff that is repetitive with intro, but refer to intro here.
+
+% Also takes humanoid model as input.
+% Refer to Fig. 9
+
+
 
 Not all tasks for humanoid forms necessarily require balance as an end goal. 
 For example, a football player trying to score a touchdown, or a baseball player trying to catch a fly ball,
@@ -2322,6 +2363,7 @@ angular momentum reservoir) is possible in response to a disturbance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion and Open Questions}
+\label{sec:Discussion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
