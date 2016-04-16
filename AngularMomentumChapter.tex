@@ -1335,44 +1335,35 @@ motion planner that generates trajectories for desired momentum.
 
 
 
-\subsection{Centroidal-Moment Point-Based Balance Control }
+\subsection{Centroidal-Moment Point-Based Balance Control}
 \label{sec:CentroidalMomentPointControl}
 
+\subsubsection{Problem Statement}
 
-Revise this subsection to incorporate are more detailed problem statement.  Then give overview of 
-subsequent sections.  Take out stuff that is repetitive with intro, but refer to intro here.
+The \textit{Centroidal-Moment Point-Based Balance Controller} takes as input:  1) a humanoid
+model;  2) the current state of the humanoid in terms of the position and velocity of the joints
+and the 6-D position and velocity of a reaction point on the torso;  3) the contact mode of the feet with 
+the ground (single or double support);  and 4) control goals in 
+terms of reaction points of interest on the humanoid (see Figure \ref{fig:BipedModel}).
+The control goals are specified as desired state (position and velocity) of the reaction points,
+combined with corresponding PI control law gains.
+The controller outputs joint accelerations and corresponding torques to achieve the movement goals.
 
-% Also takes humanoid model as input.
-% Refer to Fig. 9
-
-
-
-Not all tasks for humanoid forms necessarily require balance as an end goal. 
-For example, a football player trying to score a touchdown, or a baseball player trying to catch a fly ball,
-does not care if he is upright at the end, as long as the goal is achieved.
-For the subsequent discussion, however, we assume that balance control is included as an end goal in a task specification.
 % Note that it is not necessarily an intermediate goal.  Often, in single support, full balance control is not possible.
 % However, the intent is to ``catch'' things so that in the subsequent double support phase, full balance control is
 % achieved.
 
-This naturally leads us to the need for a precise definition of balance control.
-Consider a horizontal plane that intersects the CoM, and that is perpendicular to the gravity vector.
-We define balance control as the ability to accelerate the CoM in any direction in this 
-horizontal plane.
-[This isn't complete enough.  See better problem definition in the introduction.]
-
-% Make this a formal definition?  Show diagram of plane, or is this obvious?
-
-% Give example.
-
-In order to understand this problem in more detail, it is useful to develop a basic model that incorporates
-all the quantities of interest.
-[The following may be, to some extent, redundant with what has already been presented.
-Talk to Ambarish about how to collapse].
+In order to understand this problem in more detail, it is useful to first develop a basic model that incorporates
+all the quantities of interest.  We follow this with a description of the humanoid model input to the controller,
+and then a description of the controller architecture and components.
 
 
 
-Balance control, as defined above, requires the ability to adjust the humanoid biped’s linear and angular momentum.  
+\subsubsection{Analysis and Abstract Models}
+
+
+
+Balance control, as defined in the Introduction, requires the ability to adjust the humanoid biped’s linear and angular momentum.  
 Due to conservation of momentum laws, such adjustment can only be achieved through force interaction with the environment.  
 For a biped, this force interaction is comprised of gravity and the ground reaction force, the net force exerted by the ground against the biped.  
 The following analysis of physical constraints and requirements for balancing leads to a simple, comprehensive model of balance control that specifies 
