@@ -2299,6 +2299,67 @@ the configuration and velocity of the trunk, e.g., from an accelerometer
 and a gyroscope.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Using Angular Momentum to Enhance Balance Controllability}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In this section, we show how the Centroidal Moment Point-based controller introduced in 
+Sec.~\ref{sec:CentroidalMomentPointControl} automatically sacrifices angular momentum goals, temporarily,
+in order to achieve balance goals.
+This test was performed with the humanoid model in single support.
+Initial conditions were such that the ground projection of the CoM was outside the support polygon, and all velocities were set to zero.  
+For such initial conditions, the CoM cannot be stabilized by stance ankle torques alone without the foot rolling and the model going unstable.  
+Simple reference trajectories consisting of single, time invariant setpoints were selected for the controller.  
+These setpoints specified the desired equilibrium positions and velocities of the model’s CoM and swing leg foot. 
+Because the desired final equilibrium posture was to stand on one leg assuming a static pose, all setpoint velocities were set to zero.
+
+Figure \ref{fig:LateralDisturbanceSequence} shows the system’s recovery from an initial displacement in the lateral (positive y) direction. 
+From the model’s perspective, the left most edge of the foot support polygon is at 0.05m.  
+As is shown in B, the ZMP remains within the foot support polygon, while the laterally displaced CoM position begins outside the stance foot, 
+but is brought quickly to zero by the controller.  
+Part C shows the desired, actual, and slack values for the lateral CoM acceleration in the optimal controller.  
+Note how the slack goes to zero quickly, due to its high penalty.  
+Part D shows the roll angle of the body.  
+Because roll angle is less tightly controlled (penalty on slack variable is less than for CoM position), the angle converges, but more slowly than the lateral CoM position.
+
+
+\begin{figure}[b]
+\centering
+ \subfigure[]
+    {
+       \label{fig:PodiumBalanceLateralDisturbanceHumanoid}
+       \includegraphics[height=0.75in]{PodiumBalanceLateralDisturbanceHumanoid}
+    }
+ \subfigure[]
+   {
+       \label{fig:LateralDisturbanceRecoveryB}
+       \includegraphics[height=1.5in]{LateralDisturbanceRecoveryB}
+   }
+ \subfigure[]
+   {
+       \label{fig:LateralDisturbanceRecoveryC}
+       \includegraphics[height=1.5in]{LateralDisturbanceRecoveryC}
+   }
+ \subfigure[]
+   {
+       \label{fig:LateralDisturbanceRecoveryD}
+       \includegraphics[height=1.5in]{LateralDisturbanceRecoveryD}
+   }\vspace{-10pt}
+\caption{Lateral disturbance recovery.  
+In A, several frames of the model are shown, starting from the maximally displaced CoM posture (left most image) to the final static equilibrium posture 
+(right most image). 
+From the perpective of the model, the right leg is the swing leg and the left the stance leg. 
+In B, the lateral direction CoM (dotted line) and the ZMP (solid line) are plotted versus time. 
+In C, the desired CoM acceleration (solid line), the actual CoM acceleration (heavy dashed line), and the slack value (dotted line) are plotted, 
+showing the stabilization of the model’s CoM. 
+Finally the body roll is plotted in D, showing the corrective measures taken by the controller.}
+\label{fig:LateralDisturbanceSequence}
+\end{figure}
+
+
+
+
+
 %===================================================
 \subsection{Balance Control for Dynamic Walking}
 %===================================================
