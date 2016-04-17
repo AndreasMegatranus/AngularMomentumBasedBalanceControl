@@ -2301,6 +2301,7 @@ and a gyroscope.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Using Angular Momentum to Enhance Balance Controllability}
+\label{sec:SingleSupportAngularMomentumBalancing}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 In this section, we show how the Centroidal Moment Point-based controller introduced in 
@@ -2364,48 +2365,169 @@ Finally the body roll is plotted in D, showing the corrective measures taken by 
 \subsection{Balance Control for Dynamic Walking}
 %===================================================
 
-We have assumed that balance control, as defined above, is an end goal for any task of interest here.
-This does not, however, imply that balance control (as defined above) must be maintained throughout the
-walking task.
-For example, with typical dynamic walking, the single support or ``stepping'' phase does not satisfy this constraint.
-With typical dynamic walking, the support leg pushes the CoM to the opposite side, but, particularly at the end of this phase,
-is not able to push the CoM to its side.
-
-[Need diagram here?]
-
-This is usually ok because the subsequent double support phase ``catches'' the system
-(the task specification should be flexible enough to not require full balance control throughout the task, only at the end).
-Thus, it is not uncommon for full balance control to be intermittent, and any controller should take this into account.
+Although balance control, as shown in the results of the previous sections, is an end goal for many typical bipedal 
+locomotion tasks, this does not imply that full balance control must be maintained throughout such tasks.
+With typical dynamic walking, the single support or ``stepping'' phase does not satisfy 
+this constraint.
+For example, consider the case where the biped is in right single support, with the left leg stepping.
+The right leg pushes the CoM laterally to the opposite (left) side.
+Towards the end of this phase, the right leg no longer has the ability to push the CoM laterally back to the
+near (right) side;  there is too much momentum to the left, and not enough of a support base.
+This is usually ok because the subsequent double support phase ``catches'' the system.
+Thus, it is not uncommon for full balance control to be intermittent, and any control system should take this into 
+account.
 Further, as discussed above, it is often desirable to sacrifice some posture goals in favor of balance control goals.
 Such sacrifice will typically be intermittent, in response to disturbances, allowing upright posture to be restored
 by the end of the task.
 The controller should be intelligent enough to take advantage of such flexibility in the task specification.
 
-This suggests that the controller framework should be equiped with some ``foresight'', allowing it to verify that end
-goals are achieved, even if they are not maintained throughout the task.
-A good approach for achieving such foresight is to use a \textit{Receding Horizon Model Predictive Controller} framework [cite].
-Such a controller essentially plans control actions over a limited (receding) time horizon.
-In this sense, it performs calculations similar to those of a motion planner.
-However, the purposes for these calculations are very different.
-Whereas the purpose of the calculations in a motion planner is to generate detailed joint trajectories to be executed exactly, 
-the purpose of the calculations in the receding horizon controller is to guarantee that the next control action does not
-lead the system into an undesired state at the end of the horizon.
-This allows a receding horizon controller to accept uncontrollable balance single support phases if the subsequent double support
+This suggests that the overall bipedal walking system should be equiped with some ``foresight'', allowing it to
+verify that end goals are achievable, even if there are intermittent periods of very limited control.
+Such foresight is provided by a \textit{motion planner}, which outputs goals to be input to the momentum 
+controllers.
+A typical motion planner produces a reference trajectory, which the controller then tries to follow.
+For example, reference trajectories for system linear and angular momentum produced by a motion planner
+would be input directly to a momentum controller such as the one described in Sec.~\ref{sec:framework}.
+
+A motion planner need not, necessarily, produce a detailed reference trajectory.
+It could instead, produce a coarser set of waypoints that define regions in state space to be achieved
+at the end of a single or double support phase.
+Such an approach works well with the type of controller described in Sec.~\ref{sec:CentroidalMomentPointControl}.
+This type of motion planning utilizes \textit{reach set analysis} to generate the waypoints (goal sets)
+for the controllers.
+This corresponds to generation of \textit{flow tubes};  families of trajectories that lead to the goal sets
+\cite{hofmann2015temporally, hofmann2006exploiting}.
+This has the potential advantage of improved robustness because there are, effectively, multiple reference
+trajectories for the controller to follow, allowing the controller more options in reacting to disturbances.
+
+A detailed discussion of motion planning for bipeds is beyond the scope of this chapter.
+However, it is important to note that any motion planner formulations that properly handle both linear
+and angular momentum should be based on the controller formulations described here, but expanded over some
+time horizon.
+The primary purpose for the time horizon is to 
+guarantee that the next control action does not lead the system into an undesired state at the end of the horizon.
+This allows the biped to accept uncontrollable balance single support phases if the subsequent double support
 phase is balance controllable.
-It allows a receding horizon controller to know that a temporary sacrifice of postural goals (a temporary utilization of the 
+It allows the biped to know that a temporary sacrifice of postural goals (a temporary utilization of the 
 angular momentum reservoir) is possible in response to a disturbance.
 
-% See emails with Ambarish.
+Note that the time horizon need not be long.
+Guaranteeing that the next double support phase is balance controllable requires only planning one step in the
+future.
+In general, detailed planning many steps into the future is not necessary.
+% Certainly, humans do not (at least consciously do anything like this).
+% This should be emphasized.  There have been recent papers (Joel Chestnut, et. al) that
+% have done detailed motion trajectory planning for dozens of humanoid steps into the
+% future.  This doesn't make any sense to me.  I don't believe this is what humans or
+% animals do.  I think humans use a simple heuristic, which is likely learned, and which
+% evaluates stability and controllability.  Humans plan one or two steps, using this
+% heuristic to guide motion.
+
+% Similarly, our controller should have goals and cost functions for only a few steps into
+% the future (limited receding horizon).  The state at the end of this horizon is evaluated
+% in terms of the heuristic (which is part of the cost function).  This ensures that the
+% receding horizon controller chooses, as its next control action, an action that is consistent
+% with the humanoid being in a good state in the near future.  The process then repeats for
+% the next control time increment.
+
+
+We now present test results of execution of bipedal walking tasks with foot placement and temporal constraints, 
+and with disturbances, using the momentum controller described in Sec.~\ref{sec:CentroidalMomentPointControl}.
+
+\subsubsection{Irregular Foot Placement}
+\label{sec:IrregularFootPlacement}
+
+Fig. \ref{fig:Fig916} shows dynamic walking, but with an irregular stepping pattern, which 
+is necessary due the blocks the biped is walking on.  
+These blocks move slowly, so the timing of foot placement, as well as the positioning is important.  
+Timing requirements force the biped to move at a relatively fast speed, of about 0.8 m/s.  
+At this speed, the biped can’t just balance statically on each block.  
+Instead, the moderately fast speed requires dynamic balancing and coordination of the CoM trajectory.  
+Fig. \ref{fig:Fig915} shows the CoM trajectory and foot placements for this test.  
+The dynamic nature is indicated by the fact that the CoM trajectory barely touches the foot placement polygons, 
+and in one case, is 0.1 m away.  
+This indicates that the system is not statically stable in this pose, and is relying on the subsequent foot 
+placement sequence to maintain balance, as discussed above.
+
+\begin{figure}
+ \begin{center}
+  \includegraphics[scale=0.6]{Fig916}
+ \end{center}
+ \caption{Walking by stepping on slowly moving blocks:  1)  biped starts on long, narrow path;  2)  steps with left foot onto the brown block;  
+ 3) steps with right foot onto the other brown block;  4) steps with left foot onto the green block;  5, 6) steps with right foot onto the other green block;  
+ 7) steps with left foot onto blue block;  8) finished}
+ \label{fig:Fig916}
+\end{figure}
+
+\begin{figure}
+ \begin{center}
+  \includegraphics[scale=0.7]{Fig915}
+ \end{center}
+ \caption{CM trajectory and foot placements for irregular stepping task.}
+ \label{fig:Fig915}
+\end{figure}
+
+
+
+
+\subsubsection{Lateral Push Disturbances}
+\label{sec:LateralPushDisturbances}
+
+A biped is especially sensitive to lateral push disturbances when in single support, due to the limited support base provided by one foot. 
+In particular, a biped is most sensitive to lateral push disturbances when there are foot placement constraints, and when the push disturbance results in acceleration towards the outer 
+edge of the stance foot.  
+% For example, if the biped is in left single support, a push towards the left is particularly problematic, especially if the subsequent placement of the right foot is restricted, 
+% as when walking on a balance beam.  
+% In order to investigate recovery from this extreme situation, we performed a series of tests with these conditions.  
+
+Fig. \ref{fig:Fig918} shows recovery from a lateral push disturbance, while walking on a balance beam.  
+The push occurs from the right side of the biped during left single support. 
+Thus, the push results in an acceleration of the CM to the biped’s left.  
+Because foot placement is constrained by the narrowness of the balance beam, compensation by stepping is not an option. 
+Instead, the system compensates for the disturbance by exerting a restoring torque at the ankle.
+This torque has a significant actuation limit;  the lateral center of pressure must not get too close to the outer edge of the foot, or the foot will roll.
+Because the foot is relatively narrow, this presents a severe actuation limit.
+Additional (but also limited) compensation is accomplished through the angular movement of the torso and right leg, as shown in the third frame of the sequence \cite{hofmann2004sliding, hofmann2006robust}.  
+In particular, as shown in Fig. \ref{fig:Fig918}, the torso rotates clockwise, from the viewer’s perspective, which induces a counter-clockwise rotation of the stance leg, which, in turn, 
+engenders an acceleration of the biped’s CoM toward the biped’s right.  
+This corrects the CoM position in a similar way as the single support balancing test described previously
+in Section \ref{sec:SingleSupportAngularMomentumBalancing}.
+
+\begin{figure}
+ \begin{center}
+  \includegraphics[scale=0.7]{Fig918}
+ \end{center}
+ \caption{Recovery from lateral push while walking on a balance beam.}
+ \label{fig:Fig918}
+\end{figure}
+
+Due to joint acceleration limits, there is a limit to the angular acceleration that can be produced by the torso and the right leg.  
+Therefore, recovery of lateral balance takes some time;  the right leg is out for a significantly longer time (about two seconds) than it would be if it were just taking a normal step.  
+This means that the forward center of mass velocity must be reduced while the lateral compensation movement is taking place.  
+Otherwise, the biped would fall due to the forward CoM being too far in front.  
+This forward velocity reduction must be accomplished by the left (stance) foot alone.  
+Due to support base limitations, there is a limit on the force that can be applied in this way, and therefore a limit to the negative forward acceleration that can be produced.  
+Thus, the biped must be walking relatively slowly, in the first place, for this sort of maneuver to work at all.  
+If this is the case, then forward movement of the CoM can be slowed while the right leg is out, and then sped up again after the lateral compensation maneuver is completed.  
+Thus, the forward CoM position and the forward stepping position remain synchronized.  
+This is one reason why people tend to walk slowly on tightropes or balance beams.
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{Push Recovery and Stepping}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% This is covered in previous sections - agh, 4/16/2016
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsubsection{Synchronization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Detailed discussion of this is beyond the scope of this chapter.  Mentioned, 
+% and otherwise, see citations - agh, 4/16/2016
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\subsection{Relation to biological control (ankle and hip strategies)}
